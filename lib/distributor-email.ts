@@ -2,8 +2,8 @@ import { Resend } from 'resend';
 import ForceDownDistributorApplication from '@/emails/distEmailTemplate';
 import { DistributorApplicationFormData } from './distributor-validation';
 
-// Initialize Resend with the provided API key
-const RESEND_API_KEY = 're_BTu5FsuA_7ssZTjVoPWe3V7iLqaVwBtNa';
+// Initialize Resend with the API key from environment variables
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const resend = new Resend(RESEND_API_KEY);
 
 interface SendDistributorApplicationEmailParams {
