@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Mail,
   Phone,
@@ -239,6 +240,7 @@ export function Footer() {
             >
               Contact
             </Link>
+            <ThemeToggle />
           </div>
         </motion.div>
       </motion.div>

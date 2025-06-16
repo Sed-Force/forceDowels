@@ -5,6 +5,7 @@ import {
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
@@ -36,12 +37,14 @@ export default function RootLayout({
       <html lang="en">
         <body className={`${inter.className} flex flex-col min-h-screen`}>
           <SpeedInsights/>
-              <AuthProvider> 
+              <AuthProvider>
                 <CartProvider>
-                  <Header />
-                  <div className="flex-1 overflow-auto">{children}</div>
-                  <Footer />
-                  <Toaster />
+                  <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+                    <Header />
+                    <div className="flex-1 overflow-auto">{children}</div>
+                    <Footer />
+                    <Toaster />
+                  </ThemeProvider>
                 </CartProvider>
               </AuthProvider>
         </body>

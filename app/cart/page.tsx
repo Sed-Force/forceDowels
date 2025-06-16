@@ -99,7 +99,7 @@ export default function CartPage() {
   return (
     <div className="container py-8">
       <div className="flex items-center mb-6">
-        <Link href="/order" className="flex items-center text-gray-600 hover:text-amber-600 mr-4">
+        <Link href="/order" className="flex items-center text-muted-foreground hover:text-amber-600 mr-4">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to Order
         </Link>
@@ -112,7 +112,7 @@ export default function CartPage() {
             <CardTitle>Your cart is empty</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500 mb-4">Add some items to your cart to get started.</p>
+            <p className="text-muted-foreground mb-4">Add some items to your cart to get started.</p>
             <Button
               className="bg-amber-600 hover:bg-amber-700"
               onClick={() => router.push('/order')}
@@ -140,12 +140,12 @@ export default function CartPage() {
                     <motion.div
                       key={item.id}
                       variants={itemVariants}
-                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-md"
+                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-border rounded-md"
                     >
                       <div className="flex-1 mb-2 sm:mb-0">
                         <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-gray-500">Tier: {item.tier}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">Tier: {item.tier}</p>
+                        <p className="text-sm text-muted-foreground">
                           ${formatPrice(item?.pricePerUnit || 0)} per unit
                         </p>
                       </div>
@@ -166,7 +166,7 @@ export default function CartPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => removeItem(item.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

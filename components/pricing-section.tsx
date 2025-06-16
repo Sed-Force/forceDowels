@@ -48,11 +48,11 @@ export function PricingSection() {
           </CardHeader>
           <CardContent className="flex-1">
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500">Quantity Range</p>
+              <p className="text-sm font-medium text-muted-foreground">Quantity Range</p>
               <p className="text-lg font-bold">{tier.range}</p>
             </div>
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500">Price Per Unit</p>
+              <p className="text-sm font-medium text-muted-foreground">Price Per Unit</p>
               <p className="text-lg font-bold">Contact for Pricing</p>
             </div>
             <ul className="space-y-2 text-sm">

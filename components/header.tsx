@@ -161,7 +161,7 @@ function HeaderContent() {
     <motion.header
       ref={headerRef}
       className={`sticky top-0 z-50 w-full border-b ${
-        scrolled ? "bg-white/95 backdrop-blur-sm shadow-sm" : "bg-white"
+        scrolled ? "bg-background/95 backdrop-blur-sm shadow-sm" : "bg-background"
       } transition-all duration-300`}
       variants={headerVariants}
       initial="initial"
@@ -233,7 +233,7 @@ function HeaderContent() {
             custom={2}
           >
             <Link href="/cart">
-              <Button variant="ghost" size="sm" className="relative text-gray-700 hover:text-amber-600">
+              <Button variant="ghost" size="sm" className="relative text-foreground hover:text-amber-600">
                 <ShoppingCart className={`h-5 w-5 ${itemCount > 0 ? 'text-amber-600' : ''}`} />
                 {itemCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-amber-600 h-2 w-2 rounded-full" />
@@ -254,7 +254,7 @@ function HeaderContent() {
                 custom={3}
               >
                 <Link href="/sign-in">
-                  <Button variant="ghost" size="sm" className="text-gray-700 hover:text-amber-600">
+                  <Button variant="ghost" size="sm" className="text-foreground hover:text-amber-600">
                     Login
                   </Button>
                 </Link>
@@ -371,7 +371,7 @@ function HeaderContent() {
                 </AnimatePresence>
 
                 {/* Clerk Auth for Mobile Menu */}
-                <div className="mt-auto pt-4 border-t border-gray-200">
+                <div className="mt-auto pt-4 border-t border-border">
                   <SignedIn>
                     <div className="flex flex-col gap-2">
                        <Link href="/profile" className="text-lg font-medium hover:text-amber-600" onClick={() => setIsOpen(false)}>Profile</Link>
@@ -408,7 +408,7 @@ function HeaderContent() {
 export function Header() {
   return (
     <Suspense fallback={
-      <header className="sticky top-0 z-50 w-full border-b bg-white">
+      <header className="sticky top-0 z-50 w-full border-b bg-background">
         <div className="container flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex flex-col">

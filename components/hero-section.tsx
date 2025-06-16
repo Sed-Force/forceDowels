@@ -49,7 +49,7 @@ export function HeroSection() {
   }
 
   return (
-    <section className="bg-amber-50 py-8 md:py-12">
+    <section className="bg-secondary py-8 md:py-12">
       <div className="container px-4 md:px-6">
         <motion.div
           className="flex flex-col md:flex-row items-center gap-6 md:gap-10"
@@ -62,7 +62,7 @@ export function HeroSection() {
               Force Dowels™
               <span className="block text-lg text-amber-600 font-medium mt-1">Patent Pending</span>
             </motion.h1>
-            <motion.p className="text-gray-700 mb-4 max-w-md mx-auto md:mx-0" variants={itemVariants}>
+            <motion.p className="text-muted-foreground mb-4 max-w-md mx-auto md:mx-0" variants={itemVariants}>
               Revolutionary cabinetry fasteners that reduce labor costs and provide a flush finish.
             </motion.p>
             <motion.div
@@ -75,7 +75,7 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link href="/contact">
-                <Button variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50" size="sm">
+                <Button variant="outline" className="border-amber-600 text-amber-600 hover:bg-secondary/70" size="sm">
                   Contact Us
                 </Button>
               </Link>

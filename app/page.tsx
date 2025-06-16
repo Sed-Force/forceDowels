@@ -58,7 +58,7 @@ export default function Home() {
           {[...Array(3)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute rounded-full bg-amber-100 opacity-20"
+              className="absolute rounded-full bg-primary/10"
               style={{
                 width: Math.random() * 300 + 100,
                 height: Math.random() * 300 + 100,
@@ -86,7 +86,7 @@ export default function Home() {
               Force Dowels™
               <span className="block text-2xl md:text-3xl text-amber-600 font-medium mt-2">Patent Pending</span>
             </motion.h1>
-            <motion.p className="text-2xl md:text-3xl text-gray-700 mb-8" variants={itemVariants}>
+            <motion.p className="text-2xl md:text-3xl text-muted-foreground mb-8" variants={itemVariants}>
               Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.
             </motion.p>
 
@@ -116,7 +116,7 @@ export default function Home() {
                       <Check className="h-6 w-6 text-amber-600" />
                     </motion.div>
                   </div>
-                  <span className="text-xl text-gray-700">{feature}</span>
+                  <span className="text-xl text-muted-foreground">{feature}</span>
                 </motion.li>
               ))}
             </motion.ul>

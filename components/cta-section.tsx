@@ -79,7 +79,7 @@ export function CTASection() {
             <Link href="/contact">
               <Button
                 size="lg"
-                className="bg-white text-amber-600 hover:bg-amber-50"
+                className="bg-primary-foreground text-amber-600 hover:bg-secondary"
                 whileHover={{ scale: 1.05, boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.1)" }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -100,7 +100,7 @@ export function CTASection() {
         {[...Array(5)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute rounded-full bg-white opacity-10"
+            className="absolute rounded-full bg-background opacity-10"
             style={{
               width: Math.random() * 200 + 50,
               height: Math.random() * 200 + 50,
