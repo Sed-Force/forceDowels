@@ -31,13 +31,19 @@ export default function CartPage() {
     }
   }, [user, router, toast])
 
-  // Format number with commas
-  const formatNumber = (num: number) => {
+  // Format number with commas and null/undefined safety
+  const formatNumber = (num: number | undefined | null) => {
+    if (num === null || num === undefined || isNaN(num)) {
+      return "0"
+    }
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
   }
 
-  // Format price
-  const formatPrice = (price: number) => {
+  // Format price with null/undefined safety
+  const formatPrice = (price: number | undefined | null) => {
+    if (price === null || price === undefined || isNaN(price)) {
+      return "0.00"
+    }
     return price.toFixed(2)
   }
 
@@ -140,21 +146,21 @@ export default function CartPage() {
                         <h3 className="font-medium">{item.name}</h3>
                         <p className="text-sm text-gray-500">Tier: {item.tier}</p>
                         <p className="text-sm text-gray-500">
-                          ${formatPrice(item.pricePerUnit)} per unit
+                          ${formatPrice(item?.pricePerUnit || 0)} per unit
                         </p>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto">
                         <div className="w-28">
                           <Input
                             type="text"
-                            value={formatNumber(item.quantity)}
+                            value={formatNumber(item?.quantity || 0)}
                             onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                             className="text-right"
                             aria-label="Quantity"
                           />
                         </div>
                         <div className="w-24 text-right">
-                          ${formatPrice(item.quantity * item.pricePerUnit)}
+                          ${formatPrice((item?.quantity || 0) * (item?.pricePerUnit || 0))}
                         </div>
                         <Button
                           variant="ghost"
@@ -192,11 +198,11 @@ export default function CartPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${formatPrice(totalPrice)}</span>
+                    <span>${formatPrice(totalPrice || 0)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>${formatPrice(totalPrice)}</span>
+                    <span>${formatPrice(totalPrice || 0)}</span>
                   </div>
                 </div>
               </CardContent>

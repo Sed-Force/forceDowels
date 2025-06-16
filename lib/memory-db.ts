@@ -29,6 +29,8 @@ interface Order {
   created_at: string;
   shipping_info?: ShippingInfo;
   billing_info?: BillingInfo;
+  payment_status?: string;
+  stripe_session_id?: string;
 }
 
 // In-memory storage
@@ -45,8 +47,10 @@ export async function createOrder(orderData: {
   totalPrice?: number;
   shippingInfo?: ShippingInfo;
   billingInfo?: BillingInfo;
+  paymentStatus?: string;
+  stripeSessionId?: string;
 }): Promise<Order> {
-  const { userId, userEmail, userName, quantity, tier, totalPrice, shippingInfo, billingInfo } = orderData;
+  const { userId, userEmail, userName, quantity, tier, totalPrice, shippingInfo, billingInfo, paymentStatus, stripeSessionId } = orderData;
 
   const order: Order = {
     id: nextId++,
@@ -56,10 +60,12 @@ export async function createOrder(orderData: {
     quantity,
     tier,
     total_price: totalPrice || 0,
-    status: 'pending',
+    status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
     created_at: new Date().toISOString(),
     shipping_info: shippingInfo,
-    billing_info: billingInfo
+    billing_info: billingInfo,
+    payment_status: paymentStatus,
+    stripe_session_id: stripeSessionId
   };
 
   orders.push(order);
