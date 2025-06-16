@@ -103,6 +103,7 @@ export default function Home() {
                 "Significantly Reduced Labor Cost",
                 "Patent Pending",
                 "Built for RTA Efficiency — Strong, Simple, Reliable",
+                "Intergrates seamlessly with most 8mm dowel systems",
               ].map((feature, index) => (
                 <motion.li
                   key={index}
@@ -146,10 +147,8 @@ export default function Home() {
 
       {/* New Dynamic Sections */}
       <BlockInTextCard />
-      <AnimatedStats />
       <InteractiveGallery />
       <BenefitsComparison />
-      <TestimonialsCarousel />
     </motion.main>
   )
 }
