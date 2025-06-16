@@ -43,113 +43,44 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object
-        console.log('Payment successful for session:', session.id)
+        console.log('Checkout session completed for session:', session.id)
+        console.log('Payment status:', session.payment_status)
 
-        // Extract metadata
-        const metadata = session.metadata
-        if (!metadata) {
-          console.error('No metadata found in session')
-          break
+        // For ACH payments, the session completes but payment might still be processing
+        // We'll handle the actual payment completion in payment_intent.succeeded
+        if (session.payment_status === 'paid') {
+          // Card payments are immediately paid
+          await handleSuccessfulPayment(session)
+        } else if (session.payment_status === 'unpaid') {
+          // ACH payments start as unpaid and will be updated via payment_intent events
+          console.log('ACH payment initiated, waiting for payment_intent.succeeded event')
         }
+        break
 
-        const userId = metadata.userId
-        const userName = metadata.userName
-        const userEmail = metadata.userEmail
-        const shippingInfo = JSON.parse(metadata.shippingInfo || '{}')
-        const billingInfo = JSON.parse(metadata.billingInfo || '{}')
-        const cartItems = JSON.parse(metadata.cartItems || '[]')
+      case 'payment_intent.succeeded':
+        // Handle successful ACH payments
+        const paymentIntent = event.data.object
+        console.log('Payment intent succeeded:', paymentIntent.id)
 
-        // Extract order details from metadata
-        const shippingOption = metadata.shippingOption || 'standard'
-        const subtotal = parseFloat(metadata.subtotal || '0')
-        const shippingCost = parseFloat(metadata.shippingCost || '0')
-        const taxAmount = parseFloat(metadata.taxAmount || '0')
-        const taxRate = parseFloat(metadata.taxRate || '0')
-        const orderTotal = parseFloat(metadata.orderTotal || '0')
-
-        console.log('Creating orders with details:', {
-          itemCount: cartItems.length,
-          subtotal,
-          shippingCost,
-          taxAmount,
-          orderTotal,
-          shippingOption
+        // Retrieve the checkout session associated with this payment intent
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntent.id,
+          limit: 1
         })
 
-        // Create orders for each cart item
-        for (const item of cartItems) {
-          const order = await createOrder({
-            userId: userId,
-            userEmail: userEmail,
-            userName: userName,
-            quantity: item.quantity,
-            tier: item.tier,
-            totalPrice: item.quantity * item.pricePerUnit,
-            shippingInfo: shippingInfo,
-            billingInfo: billingInfo,
-            paymentStatus: 'paid',
-            stripeSessionId: session.id,
-          })
-
-          console.log('Created order:', order.id, 'for item:', item.name)
+        if (sessions.data.length > 0) {
+          const associatedSession = sessions.data[0]
+          console.log('Found associated session for payment intent:', associatedSession.id)
+          await handleSuccessfulPayment(associatedSession)
+        } else {
+          console.warn('No checkout session found for payment intent:', paymentIntent.id)
         }
+        break
 
-        // Create a summary order record with totals
-        const summaryOrder = await createOrder({
-          userId: userId,
-          userEmail: userEmail,
-          userName: userName,
-          quantity: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
-          tier: 'ORDER_SUMMARY',
-          totalPrice: orderTotal,
-          shippingInfo: {
-            ...shippingInfo,
-            shippingOption: shippingOption,
-            shippingCost: shippingCost
-          },
-          billingInfo: billingInfo,
-          paymentStatus: 'paid',
-          stripeSessionId: session.id,
-        })
-
-        console.log('Created summary order:', summaryOrder.id)
-
-        // Send confirmation email with complete order details
-        try {
-          console.log('Sending order confirmation email to:', userEmail)
-
-          const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/send-email`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              orderItems: cartItems,
-              subtotal: subtotal,
-              shippingCost: shippingCost,
-              shippingOption: shippingOption,
-              taxAmount: taxAmount,
-              taxRate: taxRate,
-              totalPrice: orderTotal,
-              shippingInfo: shippingInfo,
-              billingInfo: billingInfo,
-              userEmail: userEmail,
-              userName: userName,
-              stripeSessionId: session.id,
-            }),
-          })
-
-          if (!emailResponse.ok) {
-            console.warn('Failed to send order confirmation email, status:', emailResponse.status)
-            const errorText = await emailResponse.text()
-            console.warn('Email error response:', errorText)
-          } else {
-            console.log('Order confirmation email sent successfully')
-          }
-        } catch (emailError) {
-          console.warn('Error sending confirmation email:', emailError)
-        }
-
+      case 'payment_intent.processing':
+        // ACH payments go through a processing state
+        const processingPaymentIntent = event.data.object
+        console.log('Payment intent processing (ACH):', processingPaymentIntent.id)
         break
 
       case 'payment_intent.payment_failed':
@@ -164,5 +95,115 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error processing webhook:', error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+  }
+}
+
+// Helper function to handle successful payments (both card and ACH)
+async function handleSuccessfulPayment(session: any) {
+  console.log('Processing successful payment for session:', session.id)
+
+  // Extract metadata
+  const metadata = session.metadata
+  if (!metadata) {
+    console.error('No metadata found in session')
+    return
+  }
+
+  const userId = metadata.userId
+  const userName = metadata.userName
+  const userEmail = metadata.userEmail
+  const shippingInfo = JSON.parse(metadata.shippingInfo || '{}')
+  const billingInfo = JSON.parse(metadata.billingInfo || '{}')
+  const cartItems = JSON.parse(metadata.cartItems || '[]')
+
+  // Extract order details from metadata
+  const shippingOption = metadata.shippingOption || 'standard'
+  const subtotal = parseFloat(metadata.subtotal || '0')
+  const shippingCost = parseFloat(metadata.shippingCost || '0')
+  const taxAmount = parseFloat(metadata.taxAmount || '0')
+  const taxRate = parseFloat(metadata.taxRate || '0')
+  const orderTotal = parseFloat(metadata.orderTotal || '0')
+
+  console.log('Creating orders with details:', {
+    itemCount: cartItems.length,
+    subtotal,
+    shippingCost,
+    taxAmount,
+    orderTotal,
+    shippingOption
+  })
+
+  // Create orders for each cart item
+  for (const item of cartItems) {
+    const order = await createOrder({
+      userId: userId,
+      userEmail: userEmail,
+      userName: userName,
+      quantity: item.quantity,
+      tier: item.tier,
+      totalPrice: item.quantity * item.pricePerUnit,
+      shippingInfo: shippingInfo,
+      billingInfo: billingInfo,
+      paymentStatus: 'paid',
+      stripeSessionId: session.id,
+    })
+
+    console.log('Created order:', order.id, 'for item:', item.name)
+  }
+
+  // Create a summary order record with totals
+  const summaryOrder = await createOrder({
+    userId: userId,
+    userEmail: userEmail,
+    userName: userName,
+    quantity: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
+    tier: 'ORDER_SUMMARY',
+    totalPrice: orderTotal,
+    shippingInfo: {
+      ...shippingInfo,
+      shippingOption: shippingOption,
+      shippingCost: shippingCost
+    },
+    billingInfo: billingInfo,
+    paymentStatus: 'paid',
+    stripeSessionId: session.id,
+  })
+
+  console.log('Created summary order:', summaryOrder.id)
+
+  // Send confirmation email with complete order details
+  try {
+    console.log('Sending order confirmation email to:', userEmail)
+
+    const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        orderItems: cartItems,
+        subtotal: subtotal,
+        shippingCost: shippingCost,
+        shippingOption: shippingOption,
+        taxAmount: taxAmount,
+        taxRate: taxRate,
+        totalPrice: orderTotal,
+        shippingInfo: shippingInfo,
+        billingInfo: billingInfo,
+        userEmail: userEmail,
+        userName: userName,
+        stripeSessionId: session.id,
+      }),
+    })
+
+    if (!emailResponse.ok) {
+      console.warn('Failed to send order confirmation email, status:', emailResponse.status)
+      const errorText = await emailResponse.text()
+      console.warn('Email error response:', errorText)
+    } else {
+      console.log('Order confirmation email sent successfully')
+    }
+  } catch (emailError) {
+    console.warn('Error sending confirmation email:', emailError)
   }
 }

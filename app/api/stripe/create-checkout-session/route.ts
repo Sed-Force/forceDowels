@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { stripe, formatAmountForStripe } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
@@ -91,6 +91,12 @@ export async function POST(request: NextRequest) {
       success_url: `${request.nextUrl.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/checkout?canceled=true`,
       customer_email: userEmail,
+      // ACH-specific configuration
+      payment_method_options: {
+        us_bank_account: {
+          verification_method: 'automatic', // Use automatic verification for better UX
+        },
+      },
       metadata: {
         userId: userId,
         userName: user.firstName || user.username || userEmail.split('@')[0],

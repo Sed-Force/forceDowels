@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 export default function CheckoutSuccessPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [sessionData, setSessionData] = useState<any>(null)
+  const [hasChecked, setHasChecked] = useState(false) // Prevent multiple API calls
   const searchParams = useSearchParams()
   const router = useRouter()
   const { clearCart } = useCart()
@@ -25,8 +26,14 @@ export default function CheckoutSuccessPage() {
       return
     }
 
+    // Prevent multiple API calls
+    if (hasChecked) {
+      return
+    }
+
     const checkPaymentStatus = async () => {
       try {
+        setHasChecked(true) // Mark as checked immediately to prevent race conditions
         console.log('🔍 Checking payment status for session:', sessionId)
         const response = await fetch(`/api/stripe/session-status?session_id=${sessionId}`)
 
@@ -50,7 +57,33 @@ export default function CheckoutSuccessPage() {
             title: "Payment successful!",
             description: "Your order has been processed and you will receive a confirmation email shortly.",
           })
+        } else if (data.payment_status === 'processing') {
+          // Handle ACH payments that are processing
+          setStatus('success')
+          clearCart()
+          toast({
+            title: "Payment processing!",
+            description: "Your ACH payment is being processed. You will receive a confirmation email once it's complete.",
+          })
+        } else if (data.payment_status === 'ach_initiated') {
+          // Handle ACH payments that have been initiated (new status)
+          setStatus('success')
+          clearCart()
+          toast({
+            title: "ACH Payment Initiated!",
+            description: "Your bank account payment is being processed. You will receive a confirmation email once it's complete (typically 3-5 business days).",
+          })
+        } else if (data.payment_status === 'unpaid' && data.status === 'complete') {
+          // Handle ACH payments that are complete but still processing (fallback)
+          setStatus('success')
+          clearCart()
+          toast({
+            title: "Payment initiated!",
+            description: "Your ACH payment is being processed. You will receive a confirmation email once it's complete.",
+          })
         } else {
+          console.warn('Unexpected payment status:', data)
+          console.warn('Full response data:', data)
           setStatus('error')
         }
       } catch (error) {
@@ -65,7 +98,7 @@ export default function CheckoutSuccessPage() {
     }
 
     checkPaymentStatus()
-  }, [sessionId, clearCart, toast])
+  }, [sessionId, hasChecked]) // Removed clearCart and toast from dependencies to prevent re-runs
 
   const handleViewOrders = () => {
     router.push('/orders')
