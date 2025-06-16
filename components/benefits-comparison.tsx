@@ -38,7 +38,7 @@ const comparisonData: ComparisonItem[] = [
     },
     forceDowels: {
       status: true,
-      description: "60% faster assembly process"
+      description: "Up to 60% faster assembly process"
     }
   },
   {
@@ -60,11 +60,11 @@ const comparisonData: ComparisonItem[] = [
     },
     forceDowels: {
       status: true,
-      description: "40% reduction in labor costs"
+      description: "Up to 40% reduction in labor costs"
     }
   },
   {
-    feature: "Glue Required",
+    feature: "No Glue Required",
     traditional: {
       status: false,
       description: "Often requires additional adhesives"
@@ -99,7 +99,7 @@ export function BenefitsComparison() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
-            Traditional vs Force Dowels™
+           Force Dowels™
             <span className="block text-lg text-amber-600 font-medium mt-2">Patent Pending Technology</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -108,56 +108,8 @@ export function BenefitsComparison() {
         </motion.div>
 
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Traditional Method */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              onHoverStart={() => setHoveredSide('traditional')}
-              onHoverEnd={() => setHoveredSide(null)}
-              className="relative"
-            >
-              <Card className={`h-full transition-all duration-300 ${
-                hoveredSide === 'traditional' ? 'shadow-lg scale-105' : 'shadow-md'
-              }`}>
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl text-gray-700 flex items-center justify-center gap-2">
-                    <Clock className="h-6 w-6 text-gray-500" />
-                    Traditional Methods
-                  </CardTitle>
-                  <Badge variant="secondary" className="mx-auto">
-                    Old Way
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {comparisonData.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-gray-50"
-                    >
-                      <div className="flex-shrink-0 mt-1">
-                        <X className="h-5 w-5 text-red-500" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">
-                          {item.feature}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {item.traditional.description}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </CardContent>
-              </Card>
-            </motion.div>
-
+          <div className="justify-center items-center">
+            
             {/* Force Dowels Method */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -171,7 +123,7 @@ export function BenefitsComparison() {
               <Card className={`h-full transition-all duration-300 border-amber-200 ${
                 hoveredSide === 'force' ? 'shadow-xl scale-105 border-amber-300' : 'shadow-lg'
               }`}>
-                <CardHeader className="text-center pb-4 bg-gradient-to-r from-amber-50 to-orange-50">
+                <CardHeader className="text-center pb-4 bg-gradient-to-r from-amber-50 to-orange-50 mb-5">
                   <CardTitle className="text-2xl text-amber-700 flex items-center justify-center gap-2">
                     <Zap className="h-6 w-6 text-amber-600" />
                     Force Dowels™
@@ -225,7 +177,7 @@ export function BenefitsComparison() {
               <div className="flex flex-col items-center p-4">
                 <Clock className="h-8 w-8 text-amber-600 mb-2" />
                 <h3 className="font-semibold text-gray-900">Time Efficient</h3>
-                <p className="text-sm text-gray-600">60% faster installation</p>
+                <p className="text-sm text-gray-600">Up to 60% faster installation</p>
               </div>
               <div className="flex flex-col items-center p-4">
                 <Eye className="h-8 w-8 text-amber-600 mb-2" />
