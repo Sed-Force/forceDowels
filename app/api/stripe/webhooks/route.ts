@@ -5,7 +5,7 @@ import { createOrder } from '@/lib/memory-db'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const signature = headers().get('stripe-signature')
+  const signature = (await headers()).get('stripe-signature')
 
   if (!signature) {
     return NextResponse.json({ error: 'No signature provided' }, { status: 400 })
@@ -205,5 +205,40 @@ async function handleSuccessfulPayment(session: any) {
     }
   } catch (emailError) {
     console.warn('Error sending confirmation email:', emailError)
+  }
+
+  // Send admin notification email
+  try {
+    console.log('Sending admin notification email for order from:', userEmail)
+
+    const adminEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/send-admin-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        customerName: userName,
+        customerEmail: userEmail,
+        orderItems: cartItems,
+        subtotal: subtotal,
+        shippingCost: shippingCost,
+        shippingOption: shippingOption,
+        taxAmount: taxAmount,
+        totalPrice: orderTotal,
+        shippingInfo: shippingInfo,
+        billingInfo: billingInfo,
+        stripeSessionId: session.id,
+      }),
+    })
+
+    if (!adminEmailResponse.ok) {
+      console.warn('Failed to send admin notification email, status:', adminEmailResponse.status)
+      const errorText = await adminEmailResponse.text()
+      console.warn('Admin email error response:', errorText)
+    } else {
+      console.log('Admin notification email sent successfully')
+    }
+  } catch (adminEmailError) {
+    console.warn('Error sending admin notification email:', adminEmailError)
   }
 }

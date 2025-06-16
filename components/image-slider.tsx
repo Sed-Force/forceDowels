@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight, Play } from "lucide-react"
+import { ChevronLeft, ChevronRight, Play, ZoomIn, RotateCcw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
-// Define the media item type
+// Define the enhanced media item type
 type MediaItem = {
   src: string
   alt: string
+  title: string
+  description: string
   type: "image" | "video"
 }
 
@@ -37,22 +40,54 @@ export function ImageSlider() {
   const [direction, setDirection] = useState(0)
   const [media, setMedia] = useState<MediaItem[]>([])
   const [imagesLoaded, setImagesLoaded] = useState(false)
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Load images from public/pics folder
   useEffect(() => {
-    // Create media array from images in public/pics folder
-    const imageFiles = [
-      '_DSF1596.JPG',
-      '_DSF1597.JPG',
-      '_DSF1599.JPG',
-      '_DSF1600.JPG',
-      '_DSF1601.JPG',
-      'IMG_6806.JPG',
+    // Create media array from images in public/pics folder with enhanced metadata
+    const imageData = [
+      {
+        filename: '_DSF1596.JPG',
+        title: 'Force Dowels™ System',
+        description: 'Revolutionary dowel system for cabinet assembly'
+      },
+      {
+        filename: '_DSF1597.JPG',
+        title: 'Precision Engineering',
+        description: 'Engineered for perfect alignment and strength'
+      },
+      {
+        filename: '_DSF1599.JPG',
+        title: 'Easy Installation',
+        description: 'Simple and efficient installation process'
+      },
+      {
+        filename: '_DSF1600.JPG',
+        title: 'Professional Finish',
+        description: 'Clean, flush finish with no visible fasteners'
+      },
+      {
+        filename: '_DSF1601.JPG',
+        title: 'Durable Construction',
+        description: 'Built to last with premium materials'
+      },
+      {
+        filename: 'IMG_6806.JPG',
+        title: 'Complete Solution',
+        description: 'Everything you need for modern cabinet assembly'
+      },
     ]
 
-    const mediaItems: MediaItem[] = imageFiles.map(filename => ({
-      src: `/pics/${filename}`,
-      alt: generateAltText(filename),
+    const mediaItems: MediaItem[] = imageData.map(item => ({
+      src: `/pics/${item.filename}`,
+      alt: generateAltText(item.filename),
+      title: item.title,
+      description: item.description,
       type: 'image'
     }))
 
@@ -91,6 +126,7 @@ export function ImageSlider() {
     setDirection(-1)
     setCurrentIndex(newIndex)
     setIsPlaying(false)
+    setIsZoomed(false)
   }
 
   const goToNext = () => {
@@ -99,12 +135,14 @@ export function ImageSlider() {
     setDirection(1)
     setCurrentIndex(newIndex)
     setIsPlaying(false)
+    setIsZoomed(false)
   }
 
   const goToSlide = (index: number) => {
     setDirection(index > currentIndex ? 1 : -1)
     setCurrentIndex(index)
     setIsPlaying(false)
+    setIsZoomed(false)
   }
 
   const togglePlay = () => {
@@ -113,164 +151,152 @@ export function ImageSlider() {
     }
   }
 
-  // Enhanced animation variants for visible slide transitions
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? "100%" : "-100%",
-      zIndex: 1,
-      opacity: 1, // Keep entering slide visible
-    }),
-    center: {
-      x: 0,
-      zIndex: 2,
-      opacity: 1,
-      transition: {
-        x: { type: "spring", stiffness: 300, damping: 30 },
-      },
-    },
-    exit: (direction: number) => ({
-      x: direction < 0 ? "100%" : "-100%",
-      zIndex: 0,
-      opacity: .85, // Keep exiting slide visible
-      transition: {
-        x: { type: "spring", stiffness: 300, damping: 30 },
-      },
-    }),
+  const toggleZoom = () => {
+    setIsZoomed(!isZoomed)
   }
 
+  if (!isMounted) {
+    return <div className="h-full w-full"></div>
+  }
+
+  const currentImage = media[currentIndex]
+
   return (
-    <div className="relative h-full w-full">
-      {/* We're using the native Image preloading approach instead of this div */}
-
-      {/* Previous button */}
-      {media.length > 0 && (
-        <div className="absolute left-2 top-1/2 z-10 -translate-y-1/2">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full bg-white/80 backdrop-blur-sm shadow-md"
-              onClick={goToPrevious}
-              disabled={!imagesLoaded}
-            >
-              <ChevronLeft className="h-6 w-6" />
-              <span className="sr-only">Previous slide</span>
-            </Button>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Slider content */}
-      <div className="w-full overflow-hidden rounded-lg border relative aspect-[4/3]">
-        {media.length > 0 ? (
-          <AnimatePresence initial={false} custom={direction} mode="sync">
-            <motion.div
-              key={currentIndex}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="absolute h-full w-full"
-            >
-              {media[currentIndex].type === "image" ? (
-                <>
-                  <Image
-                    src={media[currentIndex].src || "/placeholder.svg"}
-                    alt={media[currentIndex].alt}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    quality={100}
-                  />
-                  {!imagesLoaded && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm">
-                      <div className="flex flex-col items-center">
-                        <div className="h-8 w-8 rounded-full border-4 border-amber-600 border-t-transparent animate-spin mb-2"></div>
-                        <p className="text-gray-700">Loading all images...</p>
-                      </div>
+    <div className="h-full w-full">
+      {/* Main Image */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="h-full w-full"
+      >
+          <Card className="overflow-hidden shadow-xl h-full">
+            <CardContent className="p-0 relative h-full flex flex-col">
+              <div className="relative aspect-[4/3] w-full overflow-hidden flex-1">
+                {media.length > 0 && currentImage ? (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentIndex}
+                      initial={{ opacity: 0, scale: 1.1 }}
+                      animate={{
+                        opacity: 1,
+                        scale: isZoomed ? 1.5 : 1,
+                        transition: { duration: 0.5 }
+                      }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.5 }}
+                      className="relative w-full h-full cursor-pointer"
+                      onClick={toggleZoom}
+                    >
+                      <Image
+                        src={currentImage.src}
+                        alt={currentImage.alt}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 800px"
+                        quality={100}
+                        priority
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                ) : (
+                  <div className="flex items-center justify-center h-full w-full bg-gray-100">
+                    <div className="flex flex-col items-center">
+                      <div className="h-8 w-8 rounded-full border-4 border-amber-600 border-t-transparent animate-spin mb-2"></div>
+                      <p className="text-gray-700">Loading images...</p>
                     </div>
-                  )}
-                </>
-              ) : (
-                media[currentIndex].type === "video" && (
-                  <div className="relative h-full w-full">
-                    <video
-                      src={media[currentIndex].src}
-                      className="h-full w-full object-cover"
-                      controls={isPlaying}
-                      autoPlay={isPlaying}
-                      loop={false}
-                      muted={!isPlaying}
-                      playsInline
-                    />
-                    {!isPlaying && (
-                      <motion.div
-                        className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer"
-                        onClick={togglePlay}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <motion.div
-                          className="rounded-full bg-white/80 p-4"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <Play className="h-10 w-10 text-amber-600" />
-                        </motion.div>
-                      </motion.div>
-                    )}
                   </div>
-                )
+                )}
+
+                {/* Overlay Controls */}
+                {media.length > 0 && (
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={toggleZoom}
+                      className="bg-white/90 hover:bg-white"
+                    >
+                      {isZoomed ? <RotateCcw className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Navigation Arrows */}
+                {media.length > 0 && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={goToPrevious}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={goToNext}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Image Info */}
+              {media.length > 0 && currentImage && (
+                <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50">
+                  <motion.div
+                    key={currentIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      {currentImage.title}
+                    </h3>
+                    <p className="text-gray-700 text-sm">
+                      {currentImage.description}
+                    </p>
+                  </motion.div>
+                </div>
               )}
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <div className="flex items-center justify-center h-full w-full bg-gray-100">
-            <div className="flex flex-col items-center">
-              <div className="h-8 w-8 rounded-full border-4 border-amber-600 border-t-transparent animate-spin mb-2"></div>
-              <p className="text-gray-700">Loading images...</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Image Counter */}
+        {media.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-center mt-4"
+          >
+            <div className="flex justify-center gap-2">
+              {media.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setCurrentIndex(index)
+                    setIsZoomed(false)
+                  }}
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                    index === currentIndex
+                      ? "bg-amber-600 scale-110"
+                      : "bg-amber-200 hover:bg-amber-300"
+                  }`}
+                />
+              ))}
             </div>
-          </div>
+            <p className="text-xs text-gray-600 mt-2">
+              {currentIndex + 1} of {media.length} • Click to zoom
+            </p>
+          </motion.div>
         )}
       </div>
-
-      {/* Next button */}
-      {media.length > 0 && (
-        <div className="absolute right-2 top-1/2 z-10 -translate-y-1/2">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full bg-white/80 backdrop-blur-sm shadow-md"
-              onClick={goToNext}
-              disabled={!imagesLoaded}
-            >
-              <ChevronRight className="h-6 w-6" />
-              <span className="sr-only">Next slide</span>
-            </Button>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Slide indicators */}
-      {media.length > 0 && (
-        <div className="absolute mt-2 left-1/2 z-10 flex -translate-x-1/2 space-x-3">
-          {media.map((_, index) => (
-            <button
-              key={index}
-              className={`h-3.5 w-3.5 rounded-full transition-colors duration-200 ${
-                index === currentIndex ? "bg-amber-600" : "bg-gray-300"
-              } ${!imagesLoaded ? "opacity-50 cursor-not-allowed" : ""}`}
-              onClick={() => imagesLoaded && goToSlide(index)}
-              disabled={!imagesLoaded}
-            >
-              <span className="sr-only">Go to slide {index + 1}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+    )
+  }

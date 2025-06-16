@@ -187,6 +187,7 @@ function HeaderContent() {
               { href: "/", label: "Home", section: "home" },
               { href: "/order", label: "Order", section: "order" },
               { href: "/videos", label: "Videos", section: "videos" },
+              { href: "/contact", label: "Contact", section: "contact" },
               { href: "/find-a-distributor", label: "Find a Distributor", section: "find-a-distributor" },
               { href: "/distributor-application", label: "Become a Distributor", section: "distributor-application", highlight: true },
             ] as NavLink[])
@@ -310,6 +311,7 @@ function HeaderContent() {
                     { href: "/", label: "Home", section: "home" },
                     { href: "/order", label: "Order", section: "order" },
                     { href: "/videos", label: "Videos", section: "videos" },
+                    { href: "/contact", label: "Contact", section: "contact" },
                     { href: "/find-a-distributor", label: "Find a Distributor", section: "find-a-distributor" },
                     { href: "/distributor-application", label: "Become a Distributor", section: "distributor-application", highlight: true },
                     {

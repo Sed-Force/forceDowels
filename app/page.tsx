@@ -1,7 +1,6 @@
 "use client"
 
 import { motion } from "framer-motion"
-import Image from "next/image"
 import { Check } from "lucide-react"
 import { useEffect, useState } from "react"
 import { BlockInTextCard } from "@/components/block-in-text-card"
@@ -9,6 +8,7 @@ import { AnimatedStats } from "@/components/animated-stats"
 import { TestimonialsCarousel } from "@/components/testimonials-carousel"
 import { BenefitsComparison } from "@/components/benefits-comparison"
 import { InteractiveGallery } from "@/components/interactive-gallery"
+import { ImageSlider } from "@/components/image-slider"
 
 export default function Home() {
   // Add state to track if component is mounted
@@ -103,7 +103,7 @@ export default function Home() {
                 "Significantly Reduced Labor Cost",
                 "Patent Pending",
                 "Built for RTA Efficiency — Strong, Simple, Reliable",
-                "Intergrates seamlessly with most 8mm dowel systems",
+                "Integrates Seamlessly With Most 8mm Dowel Systems",
               ].map((feature, index) => (
                 <motion.li
                   key={index}
@@ -129,25 +129,13 @@ export default function Home() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <div className="relative w-full h-full rounded-lg border overflow-hidden aspect-[4/3] shadow-2xl">
-              <Image
-                src="/pics/dowels.jpg"
-                alt="Force Dowels™"
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-                quality={100}
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-            </div>
+            <ImageSlider />
           </motion.div>
         </div>
       </div>
 
       {/* New Dynamic Sections */}
       <BlockInTextCard />
-      <InteractiveGallery />
       <BenefitsComparison />
     </motion.main>
   )
