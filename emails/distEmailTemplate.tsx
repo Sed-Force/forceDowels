@@ -14,6 +14,7 @@ import {
   Column,
 } from '@react-email/components';
 
+
 interface DistributorApplicationProps {
   fullName?: string;
   businessName?: string;
