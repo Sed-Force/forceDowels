@@ -3,7 +3,7 @@ import { OrderConfirmationEmail } from '@/components/email-templates/order-confi
 import { AdminOrderNotificationEmail } from '@/components/email-templates/admin-order-notification';
 
 // Initialize Resend with API key
-const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_123456789'; // Fallback for testing
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const resend = new Resend(RESEND_API_KEY);
 
 interface OrderItem {
@@ -119,7 +119,7 @@ export async function sendAdminOrderNotification({
 
     // Send the admin notification email
     const { data, error } = await resend.emails.send({
-      from: 'Force Dowels Orders <onboarding@resend.dev>', // Use Resend's default domain for testing
+      from: 'Force Dowels Orders <orders@forcedowels.com>', // Use Resend's default domain for testing
       to: ['cjmccann00@gmail.com'],
       subject: `🎉 New Order Received - $${totalPrice.toFixed(2)} from ${customerName}`,
       react: AdminOrderNotificationEmail({
