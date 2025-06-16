@@ -57,8 +57,8 @@ A comprehensive distributor application form system built with Next.js, React Ho
 
 ### 3. **Email Integration**
 - **Resend API Integration** (`lib/distributor-email.ts`)
-  - Uses provided API key: `re_BTu5FsuA_7ssZTjVoPWe3V7iLqaVwBtNa`
-  - Sends to specified email: `cjmccann00@gmail.com`
+  - Uses `RESEND_API_KEY` environment variable
+  - Sends to specified email: `gunner.sparks@simpliancesafe.com`
 
 - **Professional Email Template** (`emails/distEmailTemplate.tsx`)
   - React Email components for rich formatting
@@ -156,9 +156,9 @@ middleware.ts                      # Updated public routes
 - Additional form fields can be added by updating the schema and form
 
 ## Email Configuration
-- **API Key**: `re_BTu5FsuA_7ssZTjVoPWe3V7iLqaVwBtNa`
-- **Recipient**: `cjmccann00@gmail.com`
-- **From Address**: `Force Dowels <onboarding@resend.dev>`
+- **API Key**: Uses `RESEND_API_KEY` environment variable
+- **Recipient**: `gunner.sparks@simpliancesafe.com`
+- **From Address**: `Force Dowels <dist@forcedowels.com>`
 
 ## Future Enhancements
 - Database integration for application storage
