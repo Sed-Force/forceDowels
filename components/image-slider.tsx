@@ -52,29 +52,24 @@ export function ImageSlider() {
     // Create media array from images in public/pics folder with enhanced metadata
     const imageData = [
       {
-        filename: '_DSF1596.JPG',
+        filename: 'dowels.jpg',
         title: 'Force Dowels™ System',
         description: 'Revolutionary dowel system for cabinet assembly'
       },
       {
-        filename: '_DSF1597.JPG',
+        filename: 'Dowel-group.JPG',
         title: 'Precision Engineering',
         description: 'Engineered for perfect alignment and strength'
       },
       {
-        filename: '_DSF1599.JPG',
+        filename: 'dowel-panel-side-shot.jpg',
         title: 'Easy Installation',
         description: 'Simple and efficient installation process'
       },
       {
-        filename: '_DSF1600.JPG',
+        filename: 'dowel-close-up-2.JPG',
         title: 'Professional Finish',
         description: 'Clean, flush finish with no visible fasteners'
-      },
-      {
-        filename: '_DSF1601.JPG',
-        title: 'Durable Construction',
-        description: 'Built to last with premium materials'
       },
       {
         filename: 'IMG_6806.JPG',

@@ -155,7 +155,7 @@ export function Footer() {
                 <Phone className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-gray-300">(480)-581-7145</p>
-                  <p className="text-xs text-gray-400">Mon-Fri 8AM-5PM</p>
+                  <p className="text-xs text-gray-400">Mon-Fri 7:30AM-4:30PM</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">

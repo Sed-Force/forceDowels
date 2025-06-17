@@ -174,11 +174,11 @@ export function ContactInfo() {
             <div className="grid gap-2">
               <div className="flex justify-between hours-item">
                 <span className="font-medium">Monday - Friday</span>
-                <span>8:00 AM - 5:00 PM</span>
+                <span>7:30 AM - 4:30 PM</span>
               </div>
               <div className="flex justify-between hours-item">
                 <span className="font-medium">Saturday</span>
-                <span>9:00 AM - 2:00 PM</span>
+                <span>Closed</span>
               </div>
               <div className="flex justify-between hours-item">
                 <span className="font-medium">Sunday</span>

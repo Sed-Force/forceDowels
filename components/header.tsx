@@ -161,7 +161,7 @@ function HeaderContent() {
     <motion.header
       ref={headerRef}
       className={`sticky top-0 z-50 w-full border-b ${
-        scrolled ? "bg-white/95 backdrop-blur-sm shadow-sm" : "bg-white"
+        scrolled ? "bg-gray-900/95 backdrop-blur-sm shadow-sm" : "bg-gray-900"
       } transition-all duration-300`}
       variants={headerVariants}
       initial="initial"
@@ -204,8 +204,8 @@ function HeaderContent() {
               {link.section === "home" ? (
                 <Link
                   href="/"
-                  className={`text-sm font-medium hover:underline underline-offset-4 ${
-                    pathname === "/" && !activeSection ? "text-amber-600" : ""
+                  className={`text-sm font-medium hover:underline underline-offset-4 text-white ${
+                    pathname === "/" && !activeSection ? "text-amber-400" : ""
                   }`}
                 >
                   {link.label}
@@ -213,9 +213,9 @@ function HeaderContent() {
               ) : (
                 <Link
                   href={link.href}
-                  className={`text-sm font-medium hover:underline underline-offset-4 ${
-                    pathname === link.href ? "text-amber-600" : ""
-                  } ${link.highlight ? "text-amber-600 font-semibold" : ""}`}
+                  className={`text-sm font-medium hover:underline underline-offset-4 text-white ${
+                    pathname === link.href ? "text-amber-400" : ""
+                  } ${link.highlight ? "text-amber-400 font-semibold" : ""}`}
                 >
                   {link.label}
                 </Link>
@@ -234,10 +234,10 @@ function HeaderContent() {
             custom={2}
           >
             <Link href="/cart">
-              <Button variant="ghost" size="sm" className="relative text-gray-700 hover:text-amber-600">
-                <ShoppingCart className={`h-5 w-5 ${itemCount > 0 ? 'text-amber-600' : ''}`} />
+              <Button variant="ghost" size="sm" className="relative text-white hover:text-amber-400">
+                <ShoppingCart className={`h-5 w-5 ${itemCount > 0 ? 'text-amber-400' : ''}`} />
                 {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-amber-600 h-2 w-2 rounded-full" />
+                  <span className="absolute -top-1 -right-1 bg-amber-400 h-2 w-2 rounded-full" />
                 )}
               </Button>
             </Link>
@@ -255,7 +255,7 @@ function HeaderContent() {
                 custom={3}
               >
                 <Link href="/sign-in">
-                  <Button variant="ghost" size="sm" className="text-gray-700 hover:text-amber-600">
+                  <Button variant="ghost" size="sm" className="text-white hover:text-amber-400">
                     Login
                   </Button>
                 </Link>
@@ -269,7 +269,7 @@ function HeaderContent() {
                 custom={4}
               >
                 <Link href="/sign-up">
-                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                  <Button size="sm" className="bg-amber-400 hover:bg-amber-500 text-gray-900">
                     Sign Up
                   </Button>
                 </Link>
@@ -297,7 +297,7 @@ function HeaderContent() {
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" className="border-white text-white hover:bg-white hover:text-gray-900">
                     <Menu className="h-6 w-6" />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
@@ -410,16 +410,16 @@ function HeaderContent() {
 export function Header() {
   return (
     <Suspense fallback={
-      <header className="sticky top-0 z-50 w-full border-b bg-white">
+      <header className="sticky top-0 z-50 w-full border-b bg-gray-900">
         <div className="container flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex flex-col">
-              <span className="text-xl font-bold">Force Dowels™</span>
-              <span className="text-xs text-amber-600 font-medium">Patent Pending</span>
+              <span className="text-xl font-bold text-white">Force Dowels™</span>
+              <span className="text-xs text-amber-400 font-medium">Patent Pending</span>
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+            <Loader2 className="h-5 w-5 animate-spin text-amber-400" />
           </div>
         </div>
       </header>
