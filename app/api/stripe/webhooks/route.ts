@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
-import { createOrder } from '@/lib/memory-db'
+import { createOrder, initializeOrdersTable } from '@/lib/orders'
+
+// Initialize database tables on first run
+let dbInitialized = false
 
 export async function POST(request: NextRequest) {
+  // Initialize database tables if not already done
+  if (!dbInitialized) {
+    try {
+      await initializeOrdersTable()
+      dbInitialized = true
+      console.log('Database tables initialized for webhooks')
+    } catch (error) {
+      console.error('Failed to initialize database tables:', error)
+      // Continue anyway - the error will be caught later if tables don't exist
+    }
+  }
   const body = await request.text()
   const signature = (await headers()).get('stripe-signature')
 

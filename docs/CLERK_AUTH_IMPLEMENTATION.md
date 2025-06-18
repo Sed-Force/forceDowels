@@ -35,7 +35,7 @@ Successfully implemented custom sign-in and sign-up pages using Clerk authentica
 - **Changes**:
   - Added route protection using `createRouteMatcher`
   - Made auth routes (`/sign-in`, `/sign-up`) public
-  - Protected sensitive routes like `/order`, `/profile`, `/orders`
+  - Protected sensitive routes like `/order`, `/profile`
   - Maintained public access to marketing pages
 
 ### 5. Header Component Updates

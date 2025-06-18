@@ -1,44 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { currentUser } from '@clerk/nextjs/server';
+import { OrderConfirmationEmail } from '@/components/email-templates/order-confirmation';
 
-// Create reusable transporter object using SMTP
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
+// Initialize Resend with API key
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const resend = new Resend(RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
-    const clerkUser = await currentUser();
-
-    if (!clerkUser) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    let userEmail = '';
-    if (clerkUser.emailAddresses && clerkUser.emailAddresses.length > 0) {
-      // Prefer the primary email if available, otherwise take the first one.
-      const primaryEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId);
-      userEmail = primaryEmail ? primaryEmail.emailAddress : clerkUser.emailAddresses[0].emailAddress;
-    }
-
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: 'User email not found or not verified.' },
-        { status: 400 } // Bad Request, as email is crucial for this API
-      );
-    }
-
-    // Get the request body
+    // Get the request body first
     const body = await request.json();
     const {
       orderItems,
@@ -51,8 +22,61 @@ export async function POST(request: NextRequest) {
       shippingInfo,
       billingInfo,
       userName,
+      userEmail,
       stripeSessionId
     } = body;
+
+    // Check if this is a webhook call (has userEmail in body) or a direct user call
+    let customerEmail = '';
+    let customerName = '';
+
+    if (userEmail) {
+      // This is a webhook call - use the email from the request body
+      customerEmail = userEmail;
+      customerName = userName || shippingInfo?.name || userEmail.split('@')[0];
+      console.log('Processing webhook email request for:', customerEmail);
+    } else {
+      // This is a direct user call - authenticate with Clerk
+      const clerkUser = await currentUser();
+
+      if (!clerkUser) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+
+      if (clerkUser.emailAddresses && clerkUser.emailAddresses.length > 0) {
+        // Prefer the primary email if available, otherwise take the first one.
+        const primaryEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId);
+        customerEmail = primaryEmail ? primaryEmail.emailAddress : clerkUser.emailAddresses[0].emailAddress;
+      }
+
+      if (!customerEmail) {
+        return NextResponse.json(
+          { error: 'User email not found or not verified.' },
+          { status: 400 }
+        );
+      }
+
+      customerName = userName || shippingInfo?.name || clerkUser.firstName || clerkUser.username || customerEmail.split('@')[0];
+      console.log('Processing direct user email request for:', customerEmail);
+    }
+
+    // Validate required fields
+    if (!customerEmail) {
+      return NextResponse.json(
+        { error: 'Customer email is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!orderItems || orderItems.length === 0) {
+      return NextResponse.json(
+        { error: 'Order items are required' },
+        { status: 400 }
+      );
+    }
 
     // Format the current date
     const orderDate = new Date().toLocaleDateString('en-US', {
@@ -61,120 +85,40 @@ export async function POST(request: NextRequest) {
       day: 'numeric',
     });
 
-    // Create HTML content for the email
-    const customerName = userName || shippingInfo?.name || clerkUser.firstName || clerkUser.username || userEmail.split('@')[0];
-    const htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #d97706; border-bottom: 2px solid #d97706; padding-bottom: 10px;">Order Confirmation</h1>
-          <p>Dear ${customerName},</p>
-          <p>Thank you for your order! Your payment has been processed successfully.</p>
+    console.log('Sending order confirmation email to:', customerEmail);
 
-          <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h2 style="margin-top: 0; color: #374151;">Order Details</h2>
-            <p><strong>Order Date:</strong> ${orderDate}</p>
-            ${stripeSessionId ? `<p><strong>Order ID:</strong> ${stripeSessionId.slice(-8).toUpperCase()}</p>` : ''}
-          </div>
-
-          <h3 style="color: #374151;">Items Ordered:</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <thead>
-              <tr style="background-color: #f3f4f6;">
-                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb;">Item</th>
-                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb;">Qty</th>
-                <th style="padding: 12px; text-align: right; border: 1px solid #e5e7eb;">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems.map((item: any) => `
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                    <strong>${item.name}</strong><br>
-                    <small style="color: #6b7280;">Tier: ${item.tier}</small>
-                  </td>
-                  <td style="padding: 12px; text-align: center; border: 1px solid #e5e7eb;">${item.quantity}</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #e5e7eb;">$${(item.quantity * item.pricePerUnit).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-
-          <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #374151;">Order Summary</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Subtotal:</td>
-                <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${(subtotal || 0).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                  Shipping (${shippingOption || 'Standard'}):
-                </td>
-                <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">
-                  ${(shippingCost || 0) === 0 ? 'FREE' : `$${(shippingCost || 0).toFixed(2)}`}
-                </td>
-              </tr>
-              ${(taxAmount || 0) > 0 ? `
-                <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                    Tax (${((taxRate || 0) * 100).toFixed(1)}%):
-                  </td>
-                  <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${(taxAmount || 0).toFixed(2)}</td>
-                </tr>
-              ` : ''}
-              <tr style="font-weight: bold; font-size: 1.1em;">
-                <td style="padding: 12px 0; border-top: 2px solid #d97706;">Total:</td>
-                <td style="padding: 12px 0; text-align: right; border-top: 2px solid #d97706; color: #d97706;">$${(totalPrice || 0).toFixed(2)}</td>
-              </tr>
-            </table>
-          </div>
-
-          <h3 style="color: #374151;">Shipping Address:</h3>
-          <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            ${shippingInfo.name}<br>
-            ${shippingInfo.address}<br>
-            ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.zip}<br>
-            ${shippingInfo.country}
-          </div>
-
-          ${billingInfo && JSON.stringify(billingInfo) !== JSON.stringify(shippingInfo) ? `
-            <h3 style="color: #374151;">Billing Address:</h3>
-            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-              ${billingInfo.name}<br>
-              ${billingInfo.address}<br>
-              ${billingInfo.city}, ${billingInfo.state} ${billingInfo.zip}<br>
-              ${billingInfo.country}
-            </div>
-          ` : ''}
-
-          <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; color: #065f46;">
-              <strong>✓ Payment Confirmed</strong><br>
-              Your order has been successfully processed and will be prepared for shipment.
-            </p>
-          </div>
-
-          <p>If you have any questions about your order, please don't hesitate to contact us.</p>
-
-          <p style="margin-top: 30px;">
-            Best regards,<br>
-            <strong>Force Dowels Team</strong>
-          </p>
-        </div>
-      `;
-
-    // Send the email
-    const mailOptions = {
-      from: process.env.SMTP_FROM || 'Force Dowels <orders@forcedowels.com>',
-      to: userEmail,
+    // Send the email using Resend
+    const { data, error } = await resend.emails.send({
+      from: 'Force Dowels <noreply@forcedowels.com>', // Use verified domain
+      to: [customerEmail],
       subject: 'Your Force Dowels Order Confirmation',
-      html: htmlContent,
-    };
+      react: OrderConfirmationEmail({
+        customerName,
+        orderItems,
+        subtotal: subtotal || 0,
+        shippingCost: shippingCost || 0,
+        shippingOption: shippingOption || 'Standard',
+        taxAmount: taxAmount || 0,
+        taxRate: taxRate || 0,
+        totalPrice: totalPrice || 0,
+        shippingInfo,
+        billingInfo,
+        orderDate,
+        stripeSessionId,
+      }),
+    });
 
-    const info = await transporter.sendMail(mailOptions);
+    if (error) {
+      console.error('Error sending email:', error);
+      return NextResponse.json(
+        { error: 'Failed to send email', details: error },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      messageId: info.messageId
+      messageId: data?.id
     });
 
   } catch (error) {

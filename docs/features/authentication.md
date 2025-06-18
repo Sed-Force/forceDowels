@@ -55,7 +55,6 @@ The authentication system provides:
 #### Protected Routes
 - `/order` - Product ordering
 - `/profile` - User profile management
-- `/orders` - Order history
 - `/checkout` - Payment processing
 
 ### Header Integration

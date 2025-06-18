@@ -439,7 +439,6 @@ function HeaderContent() {
                   <SignedIn>
                     <div className="flex flex-col gap-2">
                        <Link href="/profile" className="text-lg font-medium hover:text-amber-600" onClick={() => setIsOpen(false)}>Profile</Link>
-                       <Link href="/orders" className="text-lg font-medium hover:text-amber-600" onClick={() => setIsOpen(false)}>Orders</Link>
                        <button
                         onClick={handleMobileSignOut}
                         className="text-lg font-medium hover:text-amber-600 text-left w-full"

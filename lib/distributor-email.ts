@@ -78,8 +78,8 @@ export async function sendDistributorApplicationEmail({
 
     // Send the email to the business
     const { data, error } = await resend.emails.send({
-      from: 'Force Dowels <dist@forcedowels.com>',
-      to: ['gunner.sparks@simpliancesafe.com'], 
+      from: 'Force Dowels <dist@forcedowels.com>', // Use verified domain
+      to: ['gunner.sparks@simpliancesafe.com'], // Business email
       subject: `New Distributor Application - ${formData.businessName}`,
       react: ForceDownDistributorApplication(emailProps),
     });
@@ -110,8 +110,8 @@ export async function sendDistributorApplicationConfirmation({
 }): Promise<{ success: boolean; error?: any }> {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Force Dowels <info@forcedowels.com>',
-      to: [applicantEmail],
+      from: 'Force Dowels <info@forcedowels.com>', // Use verified domain
+      to: [applicantEmail], // Send to actual applicant email
       subject: 'Thank you for your Force Dowels Distributor Application',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

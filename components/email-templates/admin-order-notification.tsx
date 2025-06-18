@@ -12,7 +12,7 @@ interface ShippingInfo {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
+  zip: string;
   country?: string;
   phone?: string;
 }
@@ -22,7 +22,7 @@ interface BillingInfo {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
+  zip: string;
   country?: string;
 }
 
@@ -69,7 +69,25 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
     <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto', backgroundColor: '#f8f9fa' }}>
       {/* Header */}
       <div style={{ backgroundColor: '#d97706', padding: '20px', textAlign: 'center' }}>
-        <h1 style={{ color: 'white', margin: '0', fontSize: '24px' }}>🎉 New Order Received!</h1>
+        <div style={{
+          display: 'inline-block',
+          backgroundColor: 'white',
+          padding: '12px',
+          borderRadius: '12px',
+          marginBottom: '15px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}>
+          <img
+            src="https://www.forcedowels.com/fdLogo.jpg"
+            alt="Force Dowels Logo"
+            style={{
+              height: '50px',
+              width: 'auto',
+              display: 'block'
+            }}
+          />
+        </div>
+        <h1 style={{ color: 'white', margin: '0', fontSize: '24px' }}>New Order Received!</h1>
         <p style={{ color: '#fef3c7', fontSize: '16px', margin: '5px 0 0 0' }}>Force Dowels Order Notification</p>
       </div>
       
@@ -83,7 +101,7 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
           marginBottom: '30px',
           textAlign: 'center'
         }}>
-          <h2 style={{ color: '#065f46', margin: '0 0 10px 0', fontSize: '20px' }}>💰 Payment Successful!</h2>
+          <h2 style={{ color: '#065f46', margin: '0 0 10px 0', fontSize: '20px' }}>Payment Successful!</h2>
           <p style={{ color: '#047857', margin: '0', fontSize: '16px' }}>
             A new order has been placed and payment has been confirmed.
           </p>
@@ -92,7 +110,7 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
         {/* Customer Information */}
         <div style={{ marginBottom: '30px' }}>
           <h3 style={{ color: '#374151', borderBottom: '2px solid #d97706', paddingBottom: '10px', marginBottom: '15px' }}>
-            👤 Customer Information
+            Customer Information
           </h3>
           <div style={{ backgroundColor: '#f9fafb', padding: '15px', borderRadius: '6px' }}>
             <p style={{ margin: '5px 0', color: '#374151' }}><strong>Name:</strong> {customerName}</p>
@@ -105,7 +123,7 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
         {/* Order Items */}
         <div style={{ marginBottom: '30px' }}>
           <h3 style={{ color: '#374151', borderBottom: '2px solid #d97706', paddingBottom: '10px', marginBottom: '15px' }}>
-            📦 Order Items
+            Order Items
           </h3>
           <div style={{ backgroundColor: '#f9fafb', borderRadius: '6px', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -142,7 +160,7 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
         {/* Order Summary */}
         <div style={{ marginBottom: '30px' }}>
           <h3 style={{ color: '#374151', borderBottom: '2px solid #d97706', paddingBottom: '10px', marginBottom: '15px' }}>
-            💰 Order Summary
+            Order Summary
           </h3>
           <div style={{ backgroundColor: '#f9fafb', padding: '20px', borderRadius: '6px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -173,13 +191,13 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
         {/* Shipping Information */}
         <div style={{ marginBottom: '30px' }}>
           <h3 style={{ color: '#374151', borderBottom: '2px solid #d97706', paddingBottom: '10px', marginBottom: '15px' }}>
-            🚚 Shipping Information
+            Shipping Information
           </h3>
           <div style={{ backgroundColor: '#f9fafb', padding: '15px', borderRadius: '6px' }}>
             <p style={{ margin: '5px 0', color: '#374151' }}><strong>{shippingInfo.name}</strong></p>
             <p style={{ margin: '5px 0', color: '#6b7280' }}>{shippingInfo.address}</p>
             <p style={{ margin: '5px 0', color: '#6b7280' }}>
-              {shippingInfo.city}, {shippingInfo.state} {shippingInfo.zipCode}
+              {shippingInfo.city}, {shippingInfo.state} {shippingInfo.zip}
             </p>
             {shippingInfo.country && (
               <p style={{ margin: '5px 0', color: '#6b7280' }}>{shippingInfo.country}</p>
@@ -193,13 +211,13 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
         {/* Billing Information */}
         <div style={{ marginBottom: '30px' }}>
           <h3 style={{ color: '#374151', borderBottom: '2px solid #d97706', paddingBottom: '10px', marginBottom: '15px' }}>
-            💳 Billing Information
+            Billing Information
           </h3>
           <div style={{ backgroundColor: '#f9fafb', padding: '15px', borderRadius: '6px' }}>
             <p style={{ margin: '5px 0', color: '#374151' }}><strong>{billingInfo.name}</strong></p>
             <p style={{ margin: '5px 0', color: '#6b7280' }}>{billingInfo.address}</p>
             <p style={{ margin: '5px 0', color: '#6b7280' }}>
-              {billingInfo.city}, {billingInfo.state} {billingInfo.zipCode}
+              {billingInfo.city}, {billingInfo.state} {billingInfo.zip}
             </p>
             {billingInfo.country && (
               <p style={{ margin: '5px 0', color: '#6b7280' }}>{billingInfo.country}</p>
@@ -215,7 +233,7 @@ export const AdminOrderNotificationEmail: React.FC<Readonly<AdminOrderNotificati
           borderRadius: '8px', 
           textAlign: 'center'
         }}>
-          <h3 style={{ color: '#92400e', margin: '0 0 10px 0' }}>⚡ Action Required</h3>
+          <h3 style={{ color: '#92400e', margin: '0 0 10px 0' }}>Action Required</h3>
           <p style={{ color: '#b45309', margin: '0', fontSize: '16px' }}>
             Please process this order and prepare it for shipment. The customer has been notified of their successful purchase.
           </p>

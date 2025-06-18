@@ -39,12 +39,6 @@ if (!userId) {
 - **Distributor Application**: `POST /api/distributor-application`
 - **Contact Form**: `POST /api/send-email`
 
-### Order Management
-- **Create Order**: `POST /api/orders`
-- **Get Orders**: `GET /api/orders`
-- **Get Order**: `GET /api/orders/[id]`
-- **Update Order**: `PUT /api/orders/[id]`
-
 ## Response Format
 
 All API responses follow a consistent format:
