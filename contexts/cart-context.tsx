@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from "react"
+import { getPricingTier, calculatePricePerUnit } from "@/lib/pricing"
 
 export interface CartItem {
   id: string
@@ -16,6 +17,7 @@ interface CartContextType {
   updateItemQuantity: (id: string, quantity: number) => void
   removeItem: (id: string) => void
   clearCart: () => void
+  consolidateCart: () => void
   itemCount: number
   totalPrice: number
 }
@@ -26,13 +28,43 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isClient, setIsClient] = useState(false)
 
+  // Helper function to consolidate duplicate items by name
+  const consolidateItems = (items: CartItem[]): CartItem[] => {
+    const consolidated: CartItem[] = []
+
+    items.forEach((item) => {
+      const existingIndex = consolidated.findIndex((c) => c.name === item.name)
+
+      if (existingIndex >= 0) {
+        // Combine with existing item
+        const newQuantity = consolidated[existingIndex].quantity + item.quantity
+        const tier = getPricingTier(newQuantity)
+        const pricePerUnit = calculatePricePerUnit(newQuantity)
+
+        consolidated[existingIndex] = {
+          ...consolidated[existingIndex],
+          quantity: newQuantity,
+          tier: tier?.range || consolidated[existingIndex].tier,
+          pricePerUnit: pricePerUnit || consolidated[existingIndex].pricePerUnit,
+        }
+      } else {
+        // Add as new item
+        consolidated.push(item)
+      }
+    })
+
+    return consolidated
+  }
+
   // Initialize cart from localStorage when component mounts (client-side only)
   useEffect(() => {
     setIsClient(true)
     const storedCart = localStorage.getItem("cart")
     if (storedCart) {
       try {
-        setItems(JSON.parse(storedCart))
+        const loadedItems = JSON.parse(storedCart)
+        // Automatically consolidate items when loading from storage
+        setItems(consolidateItems(loadedItems))
       } catch (error) {
         console.error("Failed to parse cart from localStorage:", error)
         localStorage.removeItem("cart")
@@ -50,30 +82,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Add an item to the cart
   const addItem = (item: CartItem) => {
     setItems((prevItems) => {
-      // Check if item already exists in cart
-      const existingItemIndex = prevItems.findIndex((i) => i.id === item.id)
-      
+      // Check if item already exists in cart by name (for Force Dowels, combine quantities)
+      const existingItemIndex = prevItems.findIndex((i) => i.name === item.name)
+
       if (existingItemIndex >= 0) {
-        // Update existing item
+        // Update existing item with new quantity and recalculate pricing
         const updatedItems = [...prevItems]
+        const newQuantity = updatedItems[existingItemIndex].quantity + item.quantity
+        const tier = getPricingTier(newQuantity)
+        const pricePerUnit = calculatePricePerUnit(newQuantity)
+
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + item.quantity,
+          quantity: newQuantity,
+          tier: tier?.range || updatedItems[existingItemIndex].tier,
+          pricePerUnit: pricePerUnit || updatedItems[existingItemIndex].pricePerUnit,
         }
         return updatedItems
       } else {
-        // Add new item
-        return [...prevItems, item]
+        // Add new item with proper pricing
+        const tier = getPricingTier(item.quantity)
+        const pricePerUnit = calculatePricePerUnit(item.quantity)
+
+        return [...prevItems, {
+          ...item,
+          tier: tier?.range || item.tier,
+          pricePerUnit: pricePerUnit || item.pricePerUnit,
+        }]
       }
     })
   }
 
-  // Update item quantity
+  // Update item quantity and recalculate tier and price
   const updateItemQuantity = (id: string, quantity: number) => {
-    setItems((prevItems) => 
-      prevItems.map((item) => 
-        item.id === id ? { ...item, quantity } : item
-      )
+    setItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.id === id) {
+          // Recalculate tier and price based on new quantity
+          const tier = getPricingTier(quantity)
+          const pricePerUnit = calculatePricePerUnit(quantity)
+
+          return {
+            ...item,
+            quantity,
+            tier: tier?.range || item.tier,
+            pricePerUnit: pricePerUnit || item.pricePerUnit,
+          }
+        }
+        return item
+      })
     )
   }
 
@@ -85,6 +142,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Clear the entire cart
   const clearCart = () => {
     setItems([])
+  }
+
+  // Consolidate duplicate items in cart (useful for fixing existing carts)
+  const consolidateCart = () => {
+    setItems((prevItems) => consolidateItems(prevItems))
   }
 
   // Calculate total number of items in cart
@@ -104,6 +166,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateItemQuantity,
         removeItem,
         clearCart,
+        consolidateCart,
         itemCount,
         totalPrice,
       }}

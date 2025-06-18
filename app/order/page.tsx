@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,51 +13,36 @@ import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { Lock, Loader2, ShoppingCart } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
+import { PRICING_TIERS, getTierInfo, formatNumber as formatNum, formatCurrency, formatExactPrice } from "@/lib/pricing"
+import Link from "next/link"
 
 export default function OrderPage() {
   const [quantity, setQuantity] = useState<number>(5000)
-  const [selectedTier, setSelectedTier] = useState<string>("5,000-19,999")
+  const [selectedTier, setSelectedTier] = useState<string>("5,000-20,000")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showPricing, setShowPricing] = useState(false)
   const { toast } = useToast()
   const user = useUser()
   const router = useRouter()
   const { addItem } = useCart()
 
-  // Check if user is authenticated and control pricing visibility
-  useEffect(() => {
-    if (user) {
-      setShowPricing(true)
-    } else {
-      setShowPricing(false)
-    }
-  }, [user])
-
-  // Updated pricing tiers with 5 tiers instead of 4
-  const tiers = [
-    { range: "5,000-19,999", min: 5000, max: 19999 },
-    { range: "20,000-79,999", min: 20000, max: 79999 },
-    { range: "80,000-159,999", min: 80000, max: 159999 },
-    { range: "160,000-239,999", min: 160000, max: 239999 },
-    { range: "240,000-320,000", min: 240000, max: 320000 },
-  ]
+  // Use the pricing tiers from the pricing utility
+  const tiers = PRICING_TIERS
 
   // Handle quantity change
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number.parseInt(e.target.value.replace(/,/g, ""), 10) || 0
-    setQuantity(Math.max(5000, value)) // Ensure minimum quantity is 5000
+    const newQuantity = Math.max(5000, value) // Ensure minimum quantity is 5000
+    setQuantity(newQuantity)
 
-    // Update selected tier based on quantity
-    const newTier = tiers.find((tier) => value >= tier.min && value <= tier.max)
-    if (newTier) {
-      setSelectedTier(newTier.range)
+    // Update selected tier based on quantity using the pricing utility
+    const tierInfo = getTierInfo(newQuantity)
+    if (tierInfo.tier) {
+      setSelectedTier(tierInfo.tier)
     }
   }
 
-  // Format number with commas
-  const formatNumber = (num: number) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-  }
+  // Use the formatNumber from pricing utility (renamed to avoid conflict)
+  const formatNumber = formatNum
 
   // Handle add to cart
   const handleAddToCart = () => {
@@ -75,16 +60,25 @@ export default function OrderPage() {
 
       setIsSubmitting(true)
 
-      // Calculate a mock price for demonstration
-      const pricePerUnit = 0.25 // Mock price per unit
+      // Get the proper pricing based on quantity
+      const tierInfo = getTierInfo(quantity)
+      if (!tierInfo.pricePerUnit) {
+        toast({
+          title: "Invalid quantity",
+          description: "Please enter a valid quantity within our pricing tiers.",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
 
-      // Add item to cart
+      // Add item to cart with proper pricing
       addItem({
-        id: `force-dowels-${Date.now()}`, // Generate a unique ID
+        id: "force-dowels", // Use consistent ID for Force Dowels
         name: "Force Dowels",
         quantity,
-        tier: selectedTier,
-        pricePerUnit,
+        tier: tierInfo.tier || selectedTier,
+        pricePerUnit: tierInfo.pricePerUnit,
       })
 
       // Show success message
@@ -95,7 +89,7 @@ export default function OrderPage() {
 
       // Reset quantity to minimum
       setQuantity(5000)
-      setSelectedTier("5,000-19,999")
+      setSelectedTier("5,000-20,000")
 
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -182,7 +176,7 @@ export default function OrderPage() {
                     whileTap={{ scale: 0.99 }}
                   >
                     <span className="font-medium">{tier.range}</span>
-                    <span className="text-amber-600 font-bold">$TBD/Unit</span>
+                    <span className="text-amber-600 font-bold">${formatExactPrice(tier.pricePerUnit)}/Unit</span>
                   </motion.div>
                 ))}
               </div>
@@ -198,11 +192,13 @@ export default function OrderPage() {
                 Need a Custom Quote?
               </motion.h3>
               <motion.p className="text-gray-700" variants={itemVariants}>
-                For orders exceeding 320,000 units or for special requirements, please contact our sales team for a
+                For orders exceeding 960,000 units or for special requirements, please contact our sales team for a
                 specialized quote.
               </motion.p>
               <motion.div variants={itemVariants} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                <Button className="mt-4 bg-amber-600 hover:bg-amber-700">Contact Sales</Button>
+                <Link href="/contact">
+                  <Button className="mt-4 bg-amber-600 hover:bg-amber-700">Contact Sales</Button>
+                </Link>
               </motion.div>
             </motion.div>
           </motion.div>
@@ -233,14 +229,25 @@ export default function OrderPage() {
                   </div>
 
                   <div className="space-y-4 pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Price per unit:</span>
-                      <span className="font-bold">$TBD</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Total price:</span>
-                      <span className="text-2xl font-bold">$TBD</span>
-                    </div>
+                    {(() => {
+                      const tierInfo = getTierInfo(quantity)
+                      return (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Price per unit:</span>
+                            <span className="font-bold">
+                              {tierInfo.pricePerUnit ? `$${formatExactPrice(tierInfo.pricePerUnit)}` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Total price:</span>
+                            <span className="text-2xl font-bold">
+                              {tierInfo.totalPrice ? formatCurrency(tierInfo.totalPrice) : 'N/A'}
+                            </span>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
 
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

@@ -31,7 +31,7 @@ const comparisonData: ComparisonItem[] = [
     }
   },
   {
-    feature: "Installation Speed",
+    feature: "Assembly Speed",
     traditional: {
       status: false,
       description: "Time-consuming drilling and fastening"

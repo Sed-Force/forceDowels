@@ -14,7 +14,7 @@ import Link from "next/link"
 
 
 export default function CartPage() {
-  const { items, updateItemQuantity, removeItem, clearCart, totalPrice } = useCart()
+  const { items, updateItemQuantity, removeItem, clearCart, consolidateCart, totalPrice } = useCart()
   const user = useUser()
   const router = useRouter()
   const { toast } = useToast()
@@ -39,12 +39,36 @@ export default function CartPage() {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
   }
 
-  // Format price with null/undefined safety
+  // Format price for totals with proper currency formatting and rounding up
   const formatPrice = (price: number | undefined | null) => {
     if (price === null || price === undefined || isNaN(price)) {
       return "0.00"
     }
-    return price.toFixed(2)
+    // Round up to nearest cent and format as currency
+    return Math.ceil(price * 100) / 100
+  }
+
+  // Format as currency string
+  const formatCurrency = (price: number | undefined | null) => {
+    if (price === null || price === undefined || isNaN(price)) {
+      return "$0.00"
+    }
+    // Round up to nearest cent and format as currency
+    const roundedPrice = Math.ceil(price * 100) / 100
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(roundedPrice)
+  }
+
+  // Format price for per-unit display with exact precision
+  const formatExactPrice = (price: number | undefined | null) => {
+    if (price === null || price === undefined || isNaN(price)) {
+      return "0"
+    }
+    return price.toString()
   }
 
   // Handle quantity change
@@ -69,6 +93,17 @@ export default function CartPage() {
 
     // Navigate to the checkout page
     router.push('/checkout')
+  }
+
+  const handleConsolidateCart = () => {
+    const beforeCount = items.length
+    consolidateCart()
+
+    // Show success message
+    toast({
+      title: "Items consolidated",
+      description: "Duplicate Force Dowels have been combined with updated bulk pricing.",
+    })
   }
 
   // Animation variants
@@ -98,12 +133,23 @@ export default function CartPage() {
 
   return (
     <div className="container py-8">
-      <div className="flex items-center mb-6">
-        <Link href="/order" className="flex items-center text-gray-600 hover:text-amber-600 mr-4">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back to Order
-        </Link>
-        <h1 className="text-3xl font-bold">Your Cart</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <Link href="/order" className="flex items-center text-gray-600 hover:text-amber-600 mr-4">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Order
+          </Link>
+          <h1 className="text-3xl font-bold">Your Cart</h1>
+        </div>
+        {items.length > 1 && items.filter(item => item.name === "Force Dowels").length > 1 && (
+          <Button
+            variant="outline"
+            onClick={handleConsolidateCart}
+            className="text-amber-600 border-amber-600 hover:bg-amber-50"
+          >
+            Combine Duplicate Items
+          </Button>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -146,7 +192,7 @@ export default function CartPage() {
                         <h3 className="font-medium">{item.name}</h3>
                         <p className="text-sm text-gray-500">Tier: {item.tier}</p>
                         <p className="text-sm text-gray-500">
-                          ${formatPrice(item?.pricePerUnit || 0)} per unit
+                          ${formatExactPrice(item?.pricePerUnit || 0)} per unit
                         </p>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -160,7 +206,7 @@ export default function CartPage() {
                           />
                         </div>
                         <div className="w-24 text-right">
-                          ${formatPrice((item?.quantity || 0) * (item?.pricePerUnit || 0))}
+                          {formatCurrency((item?.quantity || 0) * (item?.pricePerUnit || 0))}
                         </div>
                         <Button
                           variant="ghost"
@@ -176,9 +222,14 @@ export default function CartPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={clearCart}>
-                  Clear Cart
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={clearCart}>
+                    Clear Cart
+                  </Button>
+                  <Button variant="outline" onClick={consolidateCart}>
+                    Consolidate Items
+                  </Button>
+                </div>
                 <Button
                   className="bg-amber-600 hover:bg-amber-700"
                   onClick={() => router.push('/order')}
@@ -198,11 +249,11 @@ export default function CartPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${formatPrice(totalPrice || 0)}</span>
+                    <span>{formatCurrency(totalPrice || 0)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>${formatPrice(totalPrice || 0)}</span>
+                    <span>{formatCurrency(totalPrice || 0)}</span>
                   </div>
                 </div>
               </CardContent>

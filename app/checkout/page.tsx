@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,13 +15,27 @@ import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { SHIPPING_OPTIONS, calculateOrderTotal, formatPrice as formatCurrency } from "@/lib/shipping"
+import { calculateOrderTotalWithRate, ShippingOption } from "@/lib/shipping"
 
 export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [paymentCanceled, setPaymentCanceled] = useState(false)
   const [userFormPrefilled, setUserFormPrefilled] = useState(false)
+  const [shippingRates, setShippingRates] = useState<ShippingOption[]>([])
+  const [loadingShipping, setLoadingShipping] = useState(false)
+  const [shippingError, setShippingError] = useState<string | null>(null)
+  const [addressValidation, setAddressValidation] = useState<{
+    isValidating: boolean;
+    isValid: boolean | null;
+    suggestions: any[] | null;
+    error: string | null;
+  }>({
+    isValidating: false,
+    isValid: null,
+    suggestions: null,
+    error: null
+  })
   const { user, isLoaded } = useUser()
   const { isSignedIn, userId } = useAuth()
   const router = useRouter()
@@ -88,6 +102,17 @@ export default function CheckoutPage() {
     }
   }, []) // Remove dependencies to prevent loops - only check on mount
 
+  // Validate address and fetch shipping rates when address changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // First validate address, then fetch shipping rates
+      validateAddress()
+      fetchShippingRates()
+    }, 1500) // Debounce API calls - longer delay for validation + shipping
+
+    return () => clearTimeout(timer)
+  }, [formState.shippingAddress, formState.shippingCity, formState.shippingState, formState.shippingZip, formState.shippingCountry])
+
   // Note: Authentication is handled by middleware, so this useEffect is not needed
   // The middleware protects this route, so if we reach this page, the user is authenticated
 
@@ -147,6 +172,140 @@ export default function CheckoutPage() {
     })
   }
 
+  // Validate address with USPS
+  const validateAddress = async () => {
+    // Check if we have enough address info to validate
+    if (!formState.shippingAddress || !formState.shippingCity ||
+        !formState.shippingState || !formState.shippingZip) {
+      return
+    }
+
+    setAddressValidation(prev => ({ ...prev, isValidating: true, error: null }))
+
+    try {
+      const response = await fetch('/api/address/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: {
+            name: formState.shippingName || 'Customer',
+            address: formState.shippingAddress,
+            city: formState.shippingCity,
+            state: formState.shippingState,
+            zip: formState.shippingZip,
+            country: formState.shippingCountry,
+          }
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        if (data.valid) {
+          setAddressValidation({
+            isValidating: false,
+            isValid: true,
+            suggestions: null,
+            error: null
+          })
+
+          // If address was standardized, optionally update the form
+          if (data.standardizedAddress) {
+            console.log('Address standardized:', data.standardizedAddress)
+            // Optionally auto-update form with standardized address
+            // setFormState(prev => ({ ...prev, ...data.standardizedAddress }))
+          }
+        } else {
+          setAddressValidation({
+            isValidating: false,
+            isValid: false,
+            suggestions: data.suggestions || null,
+            error: data.error || 'Address could not be validated'
+          })
+        }
+      } else {
+        throw new Error(data.error || 'Address validation failed')
+      }
+    } catch (error) {
+      console.error('Error validating address:', error)
+      setAddressValidation({
+        isValidating: false,
+        isValid: false,
+        suggestions: null,
+        error: error instanceof Error ? error.message : 'Failed to validate address'
+      })
+    }
+  }
+
+  // Fetch shipping rates from USPS
+  const fetchShippingRates = async () => {
+    // Check if we have enough address info to fetch rates
+    if (!formState.shippingAddress || !formState.shippingCity ||
+        !formState.shippingState || !formState.shippingZip) {
+      return
+    }
+
+    setLoadingShipping(true)
+    setShippingError(null)
+
+    try {
+      const response = await fetch('/api/shipping/rates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shippingAddress: {
+            name: formState.shippingName || 'Customer',
+            address: formState.shippingAddress,
+            city: formState.shippingCity,
+            state: formState.shippingState,
+            zip: formState.shippingZip,
+            country: formState.shippingCountry,
+          },
+          cartItems: items
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.rates) {
+        // Convert USPS rates to our ShippingOption format
+        const formattedRates: ShippingOption[] = data.rates.map((rate: any) => ({
+          id: rate.id,
+          name: rate.displayName || `${rate.carrier} ${rate.service}`,
+          description: rate.estimatedDelivery || 'Standard delivery',
+          price: rate.rate,
+          estimatedDays: rate.estimatedDelivery || '',
+          carrier: rate.carrier,
+          service: rate.service,
+          delivery_date: rate.delivery_date,
+          delivery_date_guaranteed: rate.delivery_date_guaranteed
+        }))
+
+        setShippingRates(formattedRates)
+
+        // Auto-select the first (cheapest) option if no option is selected
+        if (!formState.shippingOption && formattedRates.length > 0) {
+          setFormState(prev => ({
+            ...prev,
+            shippingOption: formattedRates[0].id
+          }))
+        }
+      } else {
+        throw new Error(data.error || 'Failed to fetch USPS shipping rates')
+      }
+    } catch (error) {
+      console.error('Error fetching USPS shipping rates:', error)
+      setShippingRates([])
+      setShippingError(error instanceof Error ? error.message : 'Failed to get shipping rates. Please check your address and try again.')
+    } finally {
+      setLoadingShipping(false)
+    }
+  }
+
   // No longer needed - we'll handle "same as shipping" logic in the form submission
 
   // Format price with null/undefined safety
@@ -156,6 +315,16 @@ export default function CheckoutPage() {
     }
     return price.toFixed(2)
   }
+
+  // Calculate order total using useMemo for performance and consistency
+  const orderTotal = useMemo(() => {
+    // Get the selected shipping rate from USPS rates only
+    const selectedShippingRate = shippingRates.find(rate => rate.id === formState.shippingOption)
+    const shippingCost = selectedShippingRate ? selectedShippingRate.price : 0
+
+    // Use USPS shipping rate for calculation
+    return calculateOrderTotalWithRate(totalPrice, shippingCost, formState.shippingState || 'AZ')
+  }, [totalPrice, formState.shippingOption, formState.shippingState, shippingRates])
 
   // Handle form submission with Stripe
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -209,9 +378,11 @@ export default function CheckoutPage() {
       setIsSubmitting(true)
 
       // Calculate final order total including shipping and tax
-      const orderTotal = calculateOrderTotal(totalPrice, formState.shippingOption, formState.shippingState || 'CA')
+      const selectedShippingRate = shippingRates.find(rate => rate.id === formState.shippingOption)
+      const shippingCost = selectedShippingRate ? selectedShippingRate.price : 0
+      const finalOrderTotal = calculateOrderTotalWithRate(totalPrice, shippingCost, formState.shippingState || 'AZ')
 
-      console.log('Creating real order with total:', orderTotal.total)
+      console.log('Creating real order with total:', finalOrderTotal.total)
 
       // Create Stripe checkout session with real user data
       const response = await fetch('/api/stripe/create-checkout-session', {
@@ -238,7 +409,7 @@ export default function CheckoutPage() {
             country: formState.billingCountry,
           },
           shippingOption: formState.shippingOption,
-          orderTotal: orderTotal
+          orderTotal: finalOrderTotal
         }),
       })
 
@@ -390,6 +561,36 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Address Validation Status */}
+                {addressValidation.isValidating && (
+                  <div className="flex items-center justify-center py-2 text-blue-600">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm">Validating address...</span>
+                  </div>
+                )}
+
+                {addressValidation.isValid === true && (
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                    <p className="text-sm text-green-800">✓ Address validated with USPS</p>
+                  </div>
+                )}
+
+                {addressValidation.isValid === false && (
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                    <p className="text-sm text-red-800">⚠ Address validation failed: {addressValidation.error}</p>
+                    {addressValidation.suggestions && addressValidation.suggestions.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-red-700">Suggested corrections:</p>
+                        <ul className="text-xs text-red-700 mt-1">
+                          {addressValidation.suggestions.map((suggestion, index) => (
+                            <li key={index}>• {suggestion.address}, {suggestion.city}, {suggestion.state} {suggestion.zip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -501,15 +702,27 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <RadioGroup
-                  key="shipping-options"
-                  value={formState.shippingOption}
-                  onValueChange={(value) => handleSelectChange("shippingOption", value)}
-                  className="space-y-3"
-                >
-                  {SHIPPING_OPTIONS.map((option) => {
-                    const isStandardFree = option.id === 'standard' && totalPrice >= 50
-                    return (
+                {loadingShipping && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Loading shipping options...</span>
+                  </div>
+                )}
+
+                {shippingError && (
+                  <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
+                    <p className="text-sm text-yellow-800">{shippingError}</p>
+                  </div>
+                )}
+
+                {!loadingShipping && shippingRates.length > 0 && (
+                  <RadioGroup
+                    key="shipping-options"
+                    value={formState.shippingOption}
+                    onValueChange={(value) => handleSelectChange("shippingOption", value)}
+                    className="space-y-3"
+                  >
+                    {shippingRates.map((option: ShippingOption) => (
                       <div key={option.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
                         <RadioGroupItem value={option.id} id={option.id} />
                         <div className="flex-1">
@@ -518,22 +731,28 @@ export default function CheckoutPage() {
                               {option.name}
                             </Label>
                             <span className="font-medium">
-                              {isStandardFree ? 'FREE' : formatCurrency(option.price)}
+                              ${formatPrice(option.price)}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
-                            {option.description} • {option.estimatedDays}
+                            {option.description} {option.estimatedDays && `• ${option.estimatedDays}`}
                           </p>
-                          {option.id === 'standard' && totalPrice < 50 && (
-                            <p className="text-xs text-amber-600 mt-1">
-                              Add ${formatCurrency(50 - totalPrice)} more for free shipping
+                          {option.carrier && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              via {option.carrier} {option.service && `- ${option.service}`}
                             </p>
                           )}
                         </div>
                       </div>
-                    )
-                  })}
-                </RadioGroup>
+                    ))}
+                  </RadioGroup>
+                )}
+
+                {!loadingShipping && shippingRates.length === 0 && !shippingError && (
+                  <div className="text-center py-4 text-gray-500">
+                    <p>Enter your shipping address to see available shipping options</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -575,7 +794,7 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Proceed to Payment - ${formatPrice(calculateOrderTotal(totalPrice, formState.shippingOption, formState.shippingState || 'CA').total)}
+                      Proceed to Payment - ${formatPrice((orderTotal?.subtotal || 0) + (orderTotal?.shipping || 0))}
                     </>
                   )}
                 </Button>
@@ -604,36 +823,29 @@ export default function CheckoutPage() {
                 ))}
 
                 {/* Order Calculations */}
-                {(() => {
-                  const orderTotal = calculateOrderTotal(totalPrice, formState.shippingOption, formState.shippingState || 'CA')
-                  return (
-                    <div className="space-y-2 pt-4 border-t">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>${formatPrice(orderTotal?.subtotal || 0)}</span>
-                      </div>
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>${formatPrice(orderTotal?.subtotal || 0)}</span>
+                  </div>
 
-                      <div className="flex justify-between text-sm">
-                        <span>Shipping:</span>
-                        <span>
-                          {(orderTotal?.shipping || 0) === 0 ? 'FREE' : `$${formatPrice(orderTotal?.shipping || 0)}`}
-                        </span>
-                      </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Shipping:</span>
+                    <span>
+                      {(orderTotal?.shipping || 0) === 0 ? 'FREE' : `$${formatPrice(orderTotal?.shipping || 0)}`}
+                    </span>
+                  </div>
 
-                      {(orderTotal?.tax?.amount || 0) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>Tax ({((orderTotal?.tax?.rate || 0) * 100).toFixed(1)}%):</span>
-                          <span>${formatPrice(orderTotal?.tax?.amount || 0)}</span>
-                        </div>
-                      )}
+                  <div className="flex justify-between text-sm text-gray-500 italic">
+                    <span>Tax:</span>
+                    <span>Calculated during payment</span>
+                  </div>
 
-                      <div className="flex justify-between pt-2 border-t font-bold text-lg">
-                        <span>Total:</span>
-                        <span className="text-amber-600">${formatPrice(orderTotal?.total || 0)}</span>
-                      </div>
-                    </div>
-                  )
-                })()}
+                  <div className="flex justify-between pt-2 border-t font-bold text-lg">
+                    <span>Total:</span>
+                    <span className="text-amber-600">${formatPrice((orderTotal?.subtotal || 0) + (orderTotal?.shipping || 0))}</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

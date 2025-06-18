@@ -6,6 +6,10 @@ export interface ShippingOption {
   description: string
   price: number
   estimatedDays: string
+  carrier?: string
+  service?: string
+  delivery_date?: string
+  delivery_date_guaranteed?: boolean
 }
 
 export interface TaxInfo {
@@ -13,8 +17,8 @@ export interface TaxInfo {
   amount: number
 }
 
-// Shipping options
-export const SHIPPING_OPTIONS: ShippingOption[] = [
+// Fallback shipping options (used when USPS API is unavailable)
+export const FALLBACK_SHIPPING_OPTIONS: ShippingOption[] = [
   {
     id: 'standard',
     name: 'Standard Shipping',
@@ -37,6 +41,9 @@ export const SHIPPING_OPTIONS: ShippingOption[] = [
     estimatedDays: '1 business day'
   }
 ]
+
+// Keep the old export for backward compatibility
+export const SHIPPING_OPTIONS = FALLBACK_SHIPPING_OPTIONS;
 
 // State tax rates (simplified - in production, use a tax service)
 const STATE_TAX_RATES: Record<string, number> = {
@@ -92,16 +99,26 @@ const STATE_TAX_RATES: Record<string, number> = {
   'WY': 0.04,    // Wyoming
 }
 
-export function calculateShipping(subtotal: number, shippingOptionId: string): number {
-  const option = SHIPPING_OPTIONS.find(opt => opt.id === shippingOptionId)
+export function calculateShipping(subtotal: number, shippingOptionId: string, shippingOptions?: ShippingOption[]): number {
+  // Use provided shipping options or fallback to static options
+  const options = shippingOptions || FALLBACK_SHIPPING_OPTIONS;
+  const option = options.find(opt => opt.id === shippingOptionId)
   if (!option) return 0
 
-  // Free standard shipping on orders over $50
-  if (option.id === 'standard' && subtotal >= 50) {
+  // Free standard shipping on orders over $50 (only for fallback standard shipping)
+  if (option.id === 'standard' && subtotal >= 50 && !shippingOptions) {
     return 0
   }
 
   return option.price
+}
+
+/**
+ * Calculate shipping cost from USPS rate ID
+ */
+export function calculateShippingFromRate(rateId: string, shippingOptions: ShippingOption[]): number {
+  const option = shippingOptions.find(opt => opt.id === rateId);
+  return option ? option.price : 0;
 }
 
 export function calculateTax(subtotal: number, state: string): TaxInfo {
@@ -115,8 +132,34 @@ export function calculateTax(subtotal: number, state: string): TaxInfo {
 }
 
 export function calculateOrderTotal(
-  subtotal: number, 
-  shippingOptionId: string, 
+  subtotal: number,
+  shippingOptionId: string,
+  state: string,
+  shippingOptions?: ShippingOption[]
+): {
+  subtotal: number
+  shipping: number
+  tax: TaxInfo
+  total: number
+} {
+  const shipping = calculateShipping(subtotal, shippingOptionId, shippingOptions)
+  const tax = calculateTax(subtotal + shipping, state)
+  const total = subtotal + shipping + tax.amount
+
+  return {
+    subtotal,
+    shipping,
+    tax,
+    total: Math.round(total * 100) / 100
+  }
+}
+
+/**
+ * Calculate order total with USPS shipping rate
+ */
+export function calculateOrderTotalWithRate(
+  subtotal: number,
+  shippingRate: number,
   state: string
 ): {
   subtotal: number
@@ -124,13 +167,12 @@ export function calculateOrderTotal(
   tax: TaxInfo
   total: number
 } {
-  const shipping = calculateShipping(subtotal, shippingOptionId)
-  const tax = calculateTax(subtotal + shipping, state)
-  const total = subtotal + shipping + tax.amount
+  const tax = calculateTax(subtotal + shippingRate, state)
+  const total = subtotal + shippingRate + tax.amount
 
   return {
     subtotal,
-    shipping,
+    shipping: shippingRate,
     tax,
     total: Math.round(total * 100) / 100
   }

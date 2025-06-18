@@ -7,19 +7,16 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, ShoppingCart, Loader2 } from "lucide-react" // Removed User, LogOut
+import { Menu, ShoppingCart, Loader2, ChevronDown } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { SignedIn, SignedOut, UserButton, useClerk } from "@clerk/nextjs"
 import { useCart } from "@/contexts/cart-context"
-// Removed DropdownMenu imports as UserButton provides its own
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuLabel,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 // Define the interface for navigation links
 interface NavLink {
@@ -188,8 +185,6 @@ function HeaderContent() {
               { href: "/order", label: "Order", section: "order" },
               { href: "/videos", label: "Videos", section: "videos" },
               { href: "/contact", label: "Contact", section: "contact" },
-              { href: "/find-a-distributor", label: "Find a Distributor", section: "find-a-distributor" },
-              { href: "/distributor-application", label: "Become a Distributor", section: "distributor-application", highlight: true },
             ] as NavLink[])
           ].map((link, i) => (
             <motion.div
@@ -215,13 +210,59 @@ function HeaderContent() {
                   href={link.href}
                   className={`text-sm font-medium hover:underline underline-offset-4 text-white ${
                     pathname === link.href ? "text-amber-400" : ""
-                  } ${link.highlight ? "text-amber-400 font-semibold" : ""}`}
+                  }`}
                 >
                   {link.label}
                 </Link>
               )}
             </motion.div>
           ))}
+
+          {/* Distribution Dropdown */}
+          <motion.div
+            variants={linkVariants}
+            initial="initial"
+            animate="animate"
+            whileHover="hover"
+            whileTap="tap"
+            custom={4}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`text-sm font-medium text-white hover:text-amber-400 hover:underline underline-offset-4 hover:bg-transparent p-0 h-auto ${
+                    pathname === "/find-a-distributor" || pathname === "/distributor-application" ? "text-amber-400" : ""
+                  }`}
+                >
+                  Distribution
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-white border border-gray-200 shadow-lg">
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/find-a-distributor"
+                    className={`w-full cursor-pointer ${
+                      pathname === "/find-a-distributor" ? "text-amber-600 font-medium" : ""
+                    }`}
+                  >
+                    Find a Distributor
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/distributor-application"
+                    className={`w-full cursor-pointer font-semibold text-amber-600 ${
+                      pathname === "/distributor-application" ? "text-amber-700" : ""
+                    }`}
+                  >
+                    Become a Distributor
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </motion.div>
         </nav>
         <div className="flex items-center gap-4">
           {/* Cart Icon */}
@@ -312,8 +353,6 @@ function HeaderContent() {
                     { href: "/order", label: "Order", section: "order" },
                     { href: "/videos", label: "Videos", section: "videos" },
                     { href: "/contact", label: "Contact", section: "contact" },
-                    { href: "/find-a-distributor", label: "Find a Distributor", section: "find-a-distributor" },
-                    { href: "/distributor-application", label: "Become a Distributor", section: "distributor-application", highlight: true },
                     {
                       href: "/cart",
                       label: "Cart",
@@ -371,6 +410,29 @@ function HeaderContent() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+
+                {/* Distribution Section for Mobile */}
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Distribution</h3>
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href="/find-a-distributor"
+                      className={`text-lg font-medium hover:text-amber-600 ${
+                        pathname === "/find-a-distributor" ? "text-amber-600" : ""
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Find a Distributor
+                    </Link>
+                    <Link
+                      href="/distributor-application"
+                      className="text-lg font-semibold text-amber-600 hover:text-amber-700"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Become a Distributor
+                    </Link>
+                  </div>
+                </div>
 
                 {/* Clerk Auth for Mobile Menu */}
                 <div className="mt-auto pt-4 border-t border-gray-200">
