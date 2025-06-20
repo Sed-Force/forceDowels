@@ -30,13 +30,27 @@ export interface USPSPackageDimensions {
   weight: number;
 }
 
-// Default dimensions for Force Dowels (update with real measurements)
-const DEFAULT_DOWEL_DIMENSIONS = {
-  length: 12, // inches - length of individual dowel
-  width: 0.5, // inches - diameter of dowel
-  height: 0.5, // inches - diameter of dowel
-  weight: 0.05 // pounds per dowel - UPDATE THIS WITH REAL WEIGHT
-};
+// Tier data for Force Dowels packaging and shipping
+export const TIER_DATA = [
+  { tierName: "Bag",                   maxQty: 5_000,     pkgCount: 1,
+    pkgType: "BAG",    weightLbs:  18.6, dimsIn: [18, 12,  8] },   // 1 bag
+  { tierName: "Box",                   maxQty: 20_000,    pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  77,   dimsIn: [16, 12, 12] },   // 1 box
+  { tierName: "Pallet-4-box",          maxQty: 80_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs: 458,   dimsIn: [48, 40, 40] },   // 1 pallet / 4 boxes
+  { tierName: "Pallet-8-box",          maxQty:160_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs: 766,   dimsIn: [48, 40, 60] },   // 8 boxes
+  { tierName: "Pallet-12-box",         maxQty:240_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_074,  dimsIn: [48, 40, 72] },   // 12 boxes
+  { tierName: "Pallet-16-box",         maxQty:320_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_382,  dimsIn: [48, 40, 80] },   // 16 boxes
+  { tierName: "Pallet-20-box",         maxQty:400_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_690,  dimsIn: [48, 40, 84] },   // 20 boxes
+  { tierName: "Pallet-24-box",         maxQty:480_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_998,  dimsIn: [48, 40, 90] },   // 24 boxes
+  { tierName: "Two-Pallet (48 boxes)", maxQty:960_000,    pkgCount: 2,
+    pkgType: "PALLET", weightLbs:4_000,  dimsIn: [48, 40, 90] }    // 4 000 lb TOTAL (~2 000 lb total)
+];
 
 // Your business address (from address for shipping calculations)
 const FROM_ADDRESS = {
@@ -54,93 +68,46 @@ const USPS_BASE_URL = process.env.NODE_ENV === 'production'
   : 'https://apis-tem.usps.com'; // Test environment
 
 /**
- * Calculate package dimensions and weight based on cart items
- * Estimates realistic package size for dowels bundled together
- * Handles large orders by splitting into multiple packages if needed
+ * Get the appropriate tier for a given quantity
+ */
+function getTierForQuantity(quantity: number) {
+  // Find the tier that can handle this quantity
+  for (const tier of TIER_DATA) {
+    if (quantity <= tier.maxQty) {
+      return tier;
+    }
+  }
+  // If quantity exceeds all tiers, use the largest tier
+  return TIER_DATA[TIER_DATA.length - 1];
+}
+
+/**
+ * Calculate package dimensions and weight based on cart items using tier data
+ * Uses predefined tier brackets for accurate shipping calculations
  */
 function calculatePackageDimensions(items: CartItem[]): USPSPackageDimensions {
   const totalDowels = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Calculate total weight
-  const weight = totalDowels * DEFAULT_DOWEL_DIMENSIONS.weight;
+  // Get the appropriate tier for this quantity
+  const tier = getTierForQuantity(totalDowels);
 
-  // USPS size limits for different mail classes
-  const MAX_DIMENSIONS = {
-    GROUND_ADVANTAGE: { length: 108, width: 108, height: 108, weight: 70 }, // inches and lbs
-    PRIORITY: { length: 108, width: 108, height: 108, weight: 70 },
-    EXPRESS: { length: 108, width: 108, height: 108, weight: 70 }
-  };
+  // Use tier dimensions and weight
+  const [length, width, height] = tier.dimsIn;
+  const weight = tier.weightLbs;
 
-  // Estimate package dimensions based on dowel bundling
-  const dowelLength = DEFAULT_DOWEL_DIMENSIONS.length;
-
-  // For large orders, we need to be more conservative with packaging
-  let bundleWidth, bundleHeight;
-
-  if (totalDowels <= 25) {
-    // Small bundle: arrange in a single layer
-    const dowelesPerRow = Math.ceil(Math.sqrt(totalDowels));
-    const rows = Math.ceil(totalDowels / dowelesPerRow);
-    bundleWidth = dowelesPerRow * DEFAULT_DOWEL_DIMENSIONS.width;
-    bundleHeight = rows * DEFAULT_DOWEL_DIMENSIONS.height;
-  } else if (totalDowels <= 100) {
-    // Medium bundle: more compact arrangement
-    const dowelesPerRow = Math.ceil(Math.sqrt(totalDowels / 3));
-    const layers = Math.ceil(totalDowels / (dowelesPerRow * dowelesPerRow));
-    bundleWidth = dowelesPerRow * DEFAULT_DOWEL_DIMENSIONS.width;
-    bundleHeight = layers * DEFAULT_DOWEL_DIMENSIONS.height;
-  } else {
-    // Large orders: assume multiple packages or freight shipping
-    // For now, calculate as if it's a very compact bundle
-    const dowelesPerRow = Math.ceil(Math.sqrt(totalDowels / 10));
-    const layers = Math.ceil(totalDowels / (dowelesPerRow * dowelesPerRow));
-    bundleWidth = Math.min(dowelesPerRow * DEFAULT_DOWEL_DIMENSIONS.width, 24); // Max 24" width
-    bundleHeight = Math.min(layers * DEFAULT_DOWEL_DIMENSIONS.height, 24); // Max 24" height
-  }
-
-  // Add packaging material (box, padding, etc.)
-  const packagingPadding = 2; // inches of padding
-  let length = dowelLength + packagingPadding;
-  let width = bundleWidth + packagingPadding;
-  let height = bundleHeight + packagingPadding;
-
-  // Ensure we don't exceed USPS limits for Ground Advantage
-  const maxDim = MAX_DIMENSIONS.GROUND_ADVANTAGE;
-  length = Math.min(length, maxDim.length);
-  width = Math.min(width, maxDim.width);
-  height = Math.min(height, maxDim.height);
-
-  // Ensure minimum USPS package dimensions
-  const finalLength = Math.max(length, 6);
-  const finalWidth = Math.max(width, 4);
-  const finalHeight = Math.max(height, 1);
-
-  // Add packaging weight (box, padding, etc.)
-  const packagingWeight = totalDowels > 100 ? 2.0 : 0.5; // Heavier packaging for large orders
-  let finalWeight = weight + packagingWeight;
-
-  // If weight exceeds USPS limits, cap it (this would require multiple packages in reality)
-  if (finalWeight > maxDim.weight) {
-    console.warn(`Package weight ${finalWeight} lbs exceeds USPS limit. Capping at ${maxDim.weight} lbs.`);
-    finalWeight = maxDim.weight;
-  }
-
-  // Minimum weight
-  finalWeight = Math.max(finalWeight, 1);
-
-  console.log(`Package estimation for ${totalDowels} dowels:`, {
-    dimensions: `${finalLength}" x ${finalWidth}" x ${finalHeight}"`,
-    weight: `${finalWeight} lbs`,
-    dowelWeight: `${weight} lbs`,
-    packagingWeight: `${packagingWeight} lbs`,
-    note: totalDowels > 500 ? 'Large order - may require multiple packages' : ''
+  console.log(`Package estimation for ${totalDowels} dowels using tier "${tier.tierName}":`, {
+    dimensions: `${length}" x ${width}" x ${height}"`,
+    weight: `${weight} lbs`,
+    packageType: tier.pkgType,
+    packageCount: tier.pkgCount,
+    tier: tier.tierName
   });
 
   return {
-    length: finalLength,
-    width: finalWidth,
-    height: finalHeight,
-    weight: finalWeight
+    length,
+    width,
+    height,
+    weight
   };
 }
 

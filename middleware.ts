@@ -15,7 +15,14 @@ const isPublicRoute = createRouteMatcher([
   '/api/send-email',
   '/api/send-admin-notification',
   '/api/distributor-application',
-  '/api/stripe/webhooks'
+  '/api/stripe/webhooks',
+  '/api/admin/init-database',
+  '/api/admin/cleanup-orders',
+  '/api/admin/reset-orders',
+  '/api/orders/send-completion-emails',
+  '/api/orders/update-payment-status',
+  '/api/test-db',
+  '/api/test-email-format'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

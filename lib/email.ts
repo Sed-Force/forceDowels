@@ -11,6 +11,10 @@ if (!RESEND_API_KEY) {
 
 const resend = new Resend(RESEND_API_KEY);
 
+// Rate limiting helper - simple delay to avoid hitting Resend's 2 req/sec limit
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+let lastEmailSent = 0;
+
 interface OrderItem {
   name: string;
   quantity: number;
@@ -81,6 +85,14 @@ export async function sendOrderConfirmationEmail({
   stripeSessionId,
 }: SendOrderConfirmationEmailParams): Promise<{ success: boolean; error?: any }> {
   try {
+    // Rate limiting: ensure at least 600ms between email sends (safer than 500ms for 2 req/sec)
+    const now = Date.now();
+    const timeSinceLastEmail = now - lastEmailSent;
+    if (timeSinceLastEmail < 600) {
+      await delay(600 - timeSinceLastEmail);
+    }
+    lastEmailSent = Date.now();
+
     // Format the current date
     const orderDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -139,6 +151,14 @@ export async function sendAdminOrderNotification({
   stripeSessionId,
 }: SendAdminOrderNotificationParams): Promise<{ success: boolean; error?: any }> {
   try {
+    // Rate limiting: ensure at least 600ms between email sends (safer than 500ms for 2 req/sec)
+    const now = Date.now();
+    const timeSinceLastEmail = now - lastEmailSent;
+    if (timeSinceLastEmail < 600) {
+      await delay(600 - timeSinceLastEmail);
+    }
+    lastEmailSent = Date.now();
+
     // Format the current date
     const orderDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -155,8 +175,8 @@ export async function sendAdminOrderNotification({
     // Send the admin notification email
     const { data, error } = await resend.emails.send({
       from: 'Force Dowels Orders <orders@forcedowels.com>', // Use verified domain
-      to: ['cjmccann00@gmail.com'], // Admin email
-      subject: `🎉 New Order Received - $${totalPrice.toFixed(2)} from ${customerName}`,
+      to: ['info@forcedowels.com'], // Admin email
+      subject: `New Order Received - $${totalPrice.toFixed(2)} from ${customerName}`,
       react: AdminOrderNotificationEmail({
         customerName,
         customerEmail,

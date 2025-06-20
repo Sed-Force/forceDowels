@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:init": "node scripts/init-database.js",
+    "db:status": "node -e \"require('./scripts/init-database.js')\"",
+    "env:check": "node scripts/check-env.js"
   },
   "dependencies": {
     "@auth/core": "latest",

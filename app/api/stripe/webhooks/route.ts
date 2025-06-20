@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
-import { createOrder, initializeOrdersTable } from '@/lib/orders'
+import { createOrder, initializeOrdersTable, updateOrdersPaymentStatusBySession, getOrdersByStripeSessionId } from '@/lib/orders'
 
 // Initialize database tables on first run
 let dbInitialized = false
@@ -116,6 +116,19 @@ export async function POST(request: NextRequest) {
 async function handleSuccessfulPayment(session: any) {
   console.log('Processing successful payment for session:', session.id)
 
+  // Check if orders already exist for this session to prevent duplicates
+  const existingOrders = await getOrdersByStripeSessionId(session.id)
+  if (existingOrders.length > 0) {
+    console.log('Orders already exist for session:', session.id, '- skipping duplicate creation')
+    // Just update payment status if orders exist but aren't paid yet
+    const unpaidOrders = existingOrders.filter(order => order.paymentStatus !== 'paid')
+    if (unpaidOrders.length > 0) {
+      console.log('Updating existing orders to paid status...')
+      await updateOrdersPaymentStatusBySession(session.id, 'paid')
+    }
+    return
+  }
+
   // Extract metadata
   const metadata = session.metadata
   if (!metadata) {
@@ -138,8 +151,9 @@ async function handleSuccessfulPayment(session: any) {
   const taxRate = parseFloat(metadata.taxRate || '0')
   const orderTotal = parseFloat(metadata.orderTotal || '0')
 
-  console.log('Creating orders with details:', {
+  console.log('Creating single comprehensive order with details:', {
     itemCount: cartItems.length,
+    totalQuantity: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
     subtotal,
     shippingCost,
     taxAmount,
@@ -147,112 +161,40 @@ async function handleSuccessfulPayment(session: any) {
     shippingOption
   })
 
-  // Create orders for each cart item
-  for (const item of cartItems) {
-    const order = await createOrder({
-      userId: userId,
-      userEmail: userEmail,
-      userName: userName,
-      quantity: item.quantity,
-      tier: item.tier,
-      totalPrice: item.quantity * item.pricePerUnit,
-      shippingInfo: shippingInfo,
-      billingInfo: billingInfo,
-      paymentStatus: 'paid',
-      stripeSessionId: session.id,
-    })
-
-    console.log('Created order:', order.id, 'for item:', item.name)
-  }
-
-  // Create a summary order record with totals
-  const summaryOrder = await createOrder({
+  // Create one comprehensive order record with all details
+  const order = await createOrder({
     userId: userId,
     userEmail: userEmail,
     userName: userName,
-    quantity: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
-    tier: 'ORDER_SUMMARY',
-    totalPrice: orderTotal,
+    quantity: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0), // Total dowels
+    tier: cartItems.map(item => `${item.tier} (${item.quantity})`).join(', '), // All tiers with quantities
+    totalPrice: orderTotal, // Full order total including shipping and tax
     shippingInfo: {
       ...shippingInfo,
       shippingOption: shippingOption,
       shippingCost: shippingCost
     },
-    billingInfo: billingInfo,
-    paymentStatus: 'paid',
+    billingInfo: {
+      ...billingInfo,
+      orderDetails: {
+        cartItems: cartItems,
+        subtotal: subtotal,
+        shippingCost: shippingCost,
+        taxAmount: taxAmount,
+        taxRate: taxRate,
+        orderTotal: orderTotal
+      }
+    },
+    paymentStatus: 'pending',
     stripeSessionId: session.id,
   })
 
-  console.log('Created summary order:', summaryOrder.id)
+  console.log('Created comprehensive order:', order.id, 'with', order.quantity, 'total dowels')
 
-  // Send confirmation email with complete order details
-  try {
-    console.log('Sending order confirmation email to:', userEmail)
+  // Now update all orders for this session to 'paid' status
+  // This will trigger the email sending automatically
+  console.log('Updating orders to paid status and triggering emails...')
+  await updateOrdersPaymentStatusBySession(session.id, 'paid')
 
-    const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        orderItems: cartItems,
-        subtotal: subtotal,
-        shippingCost: shippingCost,
-        shippingOption: shippingOption,
-        taxAmount: taxAmount,
-        taxRate: taxRate,
-        totalPrice: orderTotal,
-        shippingInfo: shippingInfo,
-        billingInfo: billingInfo,
-        userEmail: userEmail,
-        userName: userName,
-        stripeSessionId: session.id,
-      }),
-    })
-
-    if (!emailResponse.ok) {
-      console.warn('Failed to send order confirmation email, status:', emailResponse.status)
-      const errorText = await emailResponse.text()
-      console.warn('Email error response:', errorText)
-    } else {
-      console.log('Order confirmation email sent successfully')
-    }
-  } catch (emailError) {
-    console.warn('Error sending confirmation email:', emailError)
-  }
-
-  // Send admin notification email
-  try {
-    console.log('Sending admin notification email for order from:', userEmail)
-
-    const adminEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/send-admin-notification`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        customerName: userName,
-        customerEmail: userEmail,
-        orderItems: cartItems,
-        subtotal: subtotal,
-        shippingCost: shippingCost,
-        shippingOption: shippingOption,
-        taxAmount: taxAmount,
-        totalPrice: orderTotal,
-        shippingInfo: shippingInfo,
-        billingInfo: billingInfo,
-        stripeSessionId: session.id,
-      }),
-    })
-
-    if (!adminEmailResponse.ok) {
-      console.warn('Failed to send admin notification email, status:', adminEmailResponse.status)
-      const errorText = await adminEmailResponse.text()
-      console.warn('Admin email error response:', errorText)
-    } else {
-      console.log('Admin notification email sent successfully')
-    }
-  } catch (adminEmailError) {
-    console.warn('Error sending admin notification email:', adminEmailError)
-  }
+  console.log('Orders processed successfully and emails triggered.')
 }
