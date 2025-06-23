@@ -7,17 +7,19 @@
  * It creates the necessary tables and indexes for handling orders.
  */
 
-// Load environment variables from .env.local
-require('dotenv').config({ path: '.env.local' });
+// Load environment variables from .env.local (development) or use existing env vars (production)
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: '.env.local' });
+}
 
 const { Pool } = require('pg');
 
 // Create a new pool using the DATABASE_URL environment variable
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? {
+  ssl: {
     rejectUnauthorized: false // Required for hosted databases like Neon, Supabase, etc.
-  } : false
+  }
 });
 
 async function query(text, params) {

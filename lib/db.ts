@@ -22,6 +22,22 @@ export async function query(text: string, params?: any[]) {
   }
 }
 
+// Check if tables exist
+export async function checkTablesExist() {
+  try {
+    const result = await query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_name IN ('orders', 'distributors', 'distribution_requests')
+    `);
+    return result.rows.length === 3; // All three tables should exist
+  } catch (error) {
+    console.error('Error checking tables:', error);
+    return false;
+  }
+}
+
 // Initialize the database by creating tables if they don't exist
 export async function initializeDatabase() {
   try {
@@ -37,5 +53,19 @@ export async function initializeDatabase() {
   } catch (error) {
     console.error('Error initializing database', error);
     throw error;
+  }
+}
+
+// Ensure database is initialized (safe to call multiple times)
+export async function ensureDatabaseInitialized() {
+  try {
+    const tablesExist = await checkTablesExist();
+    if (!tablesExist) {
+      console.log('Tables missing, initializing database...');
+      await initializeDatabase();
+    }
+  } catch (error) {
+    console.error('Error ensuring database initialization:', error);
+    // Don't throw here to prevent breaking the app if DB init fails
   }
 }
