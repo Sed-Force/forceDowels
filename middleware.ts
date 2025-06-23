@@ -24,7 +24,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/orders/send-completion-emails',
   '/api/orders/update-payment-status',
   '/api/test-db',
-  '/api/test-email-format'
+  '/api/test-email-format',
+  '/api/test-order-creation'
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
