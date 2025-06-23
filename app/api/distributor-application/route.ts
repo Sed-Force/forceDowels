@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { distributorApplicationSchema } from '@/lib/distributor-validation';
 import { sendDistributorApplicationEmail, sendDistributorApplicationConfirmation } from '@/lib/distributor-email';
+import { createDistributionRequest } from '@/lib/distribution';
+import { generateDistributionRequestId } from '@/lib/distribution-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +24,25 @@ export async function POST(request: NextRequest) {
 
     const formData = validationResult.data;
 
-    // Send the application email to the business
+    // Generate unique ID for the distribution request
+    const uniqueId = generateDistributionRequestId();
+
+    // Store the distribution request in the database
+    try {
+      await createDistributionRequest(formData, uniqueId);
+      console.log('Distribution request stored with ID:', uniqueId);
+    } catch (dbError) {
+      console.error('Failed to store distribution request in database:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to store application data' },
+        { status: 500 }
+      );
+    }
+
+    // Send the application email to the business with action URLs
     const emailResult = await sendDistributorApplicationEmail({
       formData,
+      uniqueId,
     });
 
     if (!emailResult.success) {

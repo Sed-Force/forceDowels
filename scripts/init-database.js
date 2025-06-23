@@ -113,12 +113,97 @@ async function initializeDatabase() {
       console.log(`   ${idx.indexname}`);
     });
 
+    // Create distribution_requests table
+    console.log('\n6. Creating distribution_requests table...');
+    await query(`
+      CREATE TABLE IF NOT EXISTS distribution_requests (
+        id SERIAL PRIMARY KEY,
+        unique_id UUID UNIQUE NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        business_name VARCHAR(255) NOT NULL,
+        phone_number VARCHAR(50) NOT NULL,
+        email_address VARCHAR(255) NOT NULL,
+        street VARCHAR(500) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        state VARCHAR(50) NOT NULL,
+        zip_code VARCHAR(20) NOT NULL,
+        website VARCHAR(500),
+        business_type VARCHAR(100) NOT NULL,
+        business_type_other VARCHAR(255),
+        years_in_business VARCHAR(50) NOT NULL,
+        territory TEXT NOT NULL,
+        purchase_volume VARCHAR(100) NOT NULL,
+        sells_similar_products VARCHAR(10) NOT NULL,
+        similar_products_details TEXT,
+        hear_about_us VARCHAR(100) NOT NULL,
+        hear_about_us_other VARCHAR(255),
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        latitude DECIMAL(10,8),
+        longitude DECIMAL(11,8),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        responded_at TIMESTAMP WITH TIME ZONE
+      )
+    `);
+    console.log('✅ Distribution requests table created successfully!');
+
+    // Create distributors table
+    console.log('\n7. Creating distributors table...');
+    await query(`
+      CREATE TABLE IF NOT EXISTS distributors (
+        id SERIAL PRIMARY KEY,
+        distribution_request_id INTEGER REFERENCES distribution_requests(id),
+        business_name VARCHAR(255) NOT NULL,
+        contact_name VARCHAR(255) NOT NULL,
+        phone_number VARCHAR(50) NOT NULL,
+        email_address VARCHAR(255) NOT NULL,
+        street VARCHAR(500) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        state VARCHAR(50) NOT NULL,
+        zip_code VARCHAR(20) NOT NULL,
+        website VARCHAR(500),
+        business_type VARCHAR(100) NOT NULL,
+        territory TEXT NOT NULL,
+        latitude DECIMAL(10,8) NOT NULL,
+        longitude DECIMAL(11,8) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Distributors table created successfully!');
+
+    // Create distribution indexes
+    console.log('\n8. Creating distribution indexes...');
+
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_distribution_requests_unique_id ON distribution_requests(unique_id)
+    `);
+    console.log('✅ Index on distribution_requests.unique_id created');
+
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_distribution_requests_status ON distribution_requests(status)
+    `);
+    console.log('✅ Index on distribution_requests.status created');
+
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_distributors_location ON distributors(latitude, longitude)
+    `);
+    console.log('✅ Index on distributors location created');
+
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_distributors_active ON distributors(is_active)
+    `);
+    console.log('✅ Index on distributors.is_active created');
+
     console.log('\n🎉 Database initialization completed successfully!');
     console.log('\n📊 Summary:');
     console.log('   ✅ Database connection working');
     console.log('   ✅ Orders table created');
+    console.log('   ✅ Distribution requests table created');
+    console.log('   ✅ Distributors table created');
     console.log('   ✅ All indexes created');
-    console.log('   ✅ Ready to handle incoming orders');
+    console.log('   ✅ Ready to handle incoming orders and distribution requests');
 
   } catch (error) {
     console.error('\n❌ Database initialization failed:', error);

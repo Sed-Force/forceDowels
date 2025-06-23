@@ -1,6 +1,10 @@
 import { Resend } from 'resend';
 import ForceDownDistributorApplication from '@/emails/distEmailTemplate';
+import DistributorAcceptanceEmail from '@/emails/distributor-acceptance-email';
+import DistributorDeclineEmail from '@/emails/distributor-decline-email';
 import { DistributorApplicationFormData } from './distributor-validation';
+import { generateDistributionActionUrls, getBaseUrl } from './distribution-utils';
+import type { DistributionRequest } from './distribution';
 
 // Initialize Resend with the API key from environment variables
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -9,6 +13,7 @@ const resend = new Resend(RESEND_API_KEY);
 interface SendDistributorApplicationEmailParams {
   formData: DistributorApplicationFormData;
   submissionDate?: string;
+  uniqueId?: string;
 }
 
 export async function sendDistributorApplicationEmail({
@@ -18,6 +23,7 @@ export async function sendDistributorApplicationEmail({
     month: 'long',
     day: 'numeric',
   }),
+  uniqueId,
 }: SendDistributorApplicationEmailParams): Promise<{ success: boolean; error?: any }> {
   try {
     // Format business type display
@@ -56,6 +62,18 @@ export async function sendDistributorApplicationEmail({
       return sourceMap[source] || source;
     };
 
+    // Generate action URLs if uniqueId is provided
+    let acceptUrl: string | undefined;
+    let declineUrl: string | undefined;
+
+    if (uniqueId) {
+      const baseUrl = getBaseUrl();
+      const actionUrls = generateDistributionActionUrls(baseUrl, uniqueId);
+      acceptUrl = actionUrls.acceptUrl;
+      declineUrl = actionUrls.declineUrl;
+      console.log('Generated action URLs:', { acceptUrl, declineUrl });
+    }
+
     // Prepare email props for the template
     const emailProps = {
       fullName: formData.fullName,
@@ -74,12 +92,14 @@ export async function sendDistributorApplicationEmail({
       sellsSimilarProducts: formData.sellsSimilarProducts === 'yes' ? 'Yes' : 'No',
       similarProductsDetails: formData.similarProductsDetails || undefined,
       hearAboutUs: getHearAboutUsDisplay(formData.hearAboutUs, formData.hearAboutUsOther),
+      acceptUrl,
+      declineUrl,
     };
 
     // Send the email to the business
     const { data, error } = await resend.emails.send({
       from: 'Force Dowels <dist@forcedowels.com>', // Use verified domain
-      to: ['gunner.sparks@simpliancesafe.com'], // Business email
+      to: ['cjmccann00@gmail.com'], // Business email
       subject: `New Distributor Application - ${formData.businessName}`,
       react: ForceDownDistributorApplication(emailProps),
     });
@@ -165,6 +185,81 @@ export async function sendDistributorApplicationConfirmation({
     return { success: true };
   } catch (error) {
     console.error('Unexpected error sending confirmation email:', error);
+    return { success: false, error };
+  }
+}
+
+// Send acceptance notification email to applicant
+export async function sendDistributorAcceptanceNotification({
+  applicantEmail,
+  applicantName,
+  businessName,
+  territory,
+}: {
+  applicantEmail: string;
+  applicantName: string;
+  businessName: string;
+  territory: string;
+}): Promise<{ success: boolean; error?: any }> {
+  try {
+    console.log('Sending acceptance notification to:', applicantEmail);
+
+    const { data, error } = await resend.emails.send({
+      from: 'Force Dowels <distributors@forcedowels.com>', // Use verified domain
+      to: [applicantEmail],
+      subject: 'Congratulations! Your Force Dowels Distributor Application Approved',
+      react: DistributorAcceptanceEmail({
+        applicantName,
+        businessName,
+        territory,
+      }),
+    });
+
+    if (error) {
+      console.error('Error sending acceptance notification email:', error);
+      return { success: false, error };
+    }
+
+    console.log('Acceptance notification email sent successfully:', data?.id);
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error sending acceptance notification email:', error);
+    return { success: false, error };
+  }
+}
+
+// Send decline notification email to applicant
+export async function sendDistributorDeclineNotification({
+  applicantEmail,
+  applicantName,
+  businessName,
+}: {
+  applicantEmail: string;
+  applicantName: string;
+  businessName: string;
+}): Promise<{ success: boolean; error?: any }> {
+  try {
+    console.log('Sending decline notification to:', applicantEmail);
+
+    const { data, error } = await resend.emails.send({
+      from: 'Force Dowels <distributors@forcedowels.com>', // Use verified domain
+      to: [applicantEmail],
+      subject: 'Thank you for your Force Dowels Distributor Application',
+      react: DistributorDeclineEmail({
+        applicantName,
+        businessName,
+      }),
+    });
+
+    if (error) {
+      console.error('Error sending decline notification email:', error);
+      return { success: false, error };
+    }
+
+    console.log('Decline notification email sent successfully:', data?.id);
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error sending decline notification email:', error);
     return { success: false, error };
   }
 }
