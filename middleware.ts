@@ -20,6 +20,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/admin/init-database',
   '/api/admin/cleanup-orders',
   '/api/admin/reset-orders',
+  '/api/admin/clean-distributors',
   '/api/orders/send-completion-emails',
   '/api/orders/update-payment-status',
   '/api/test-db',
