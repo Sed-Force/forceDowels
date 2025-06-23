@@ -99,7 +99,7 @@ export async function sendDistributorApplicationEmail({
     // Send the email to the business
     const { data, error } = await resend.emails.send({
       from: 'Force Dowels <dist@forcedowels.com>', // Use verified domain
-      to: ['cjmccann00@gmail.com'], // Business email
+      to: ['info@forcedowels.com', 'gunner.sparks@simpliancesafe.com', 'sales@forcedowels.com', 'cjmccann00@gmail.com'], // Business email
       subject: `New Distributor Application - ${formData.businessName}`,
       react: ForceDownDistributorApplication(emailProps),
     });

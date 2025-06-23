@@ -2,29 +2,34 @@
 
 Welcome to the comprehensive documentation for the Force Dowels application. This documentation is organized to help you quickly find the information you need, whether you're getting started, developing features, or deploying to production.
 
+**📋 [Documentation Summary](DOCUMENTATION_SUMMARY.md)** - Overview of all documentation and how to use it effectively
+
 ## 📚 Documentation Structure
 
 ### 🚀 Getting Started
 Perfect for new developers or setting up the project for the first time.
 
-- **[Quick Start Guide](getting-started/quick-start.md)** - Get up and running in under 5 minutes
-- **[Installation Guide](getting-started/installation.md)** - Detailed setup instructions
-- **[Environment Setup](getting-started/environment-setup.md)** - Configure all services and API keys
+- **[📖 Project Overview](PROJECT_OVERVIEW.md)** - Complete application overview and architecture
+- **[🚀 Getting Started Guide](GETTING_STARTED.md)** - Comprehensive setup guide for new developers
+- **[⚡ Quick Start Guide](getting-started/quick-start.md)** - Get up and running in under 5 minutes
+- **[📦 Installation Guide](getting-started/installation.md)** - Detailed setup instructions
+- **[⚙️ Environment Setup](getting-started/environment-setup.md)** - Configure all services and API keys
 
-### 🌟 Features
+### 🌟 Features & Systems
 Detailed documentation for each major system in the application.
 
-- **[Authentication System](features/authentication.md)** - Clerk integration, custom pages, and security
-- **[Payment Integration](features/payments.md)** - Stripe checkout, webhooks, and security
-- **[Distributor System](features/distributor-system.md)** - Application forms, validation, and email workflows
-- **[Order Management](features/order-management.md)** - Order lifecycle, tracking, and notifications
+- **[🏪 Distribution System](DISTRIBUTION_SYSTEM.md)** - Complete distributor workflow documentation
+- **[🔐 Authentication System](features/authentication.md)** - Clerk integration, custom pages, and security
+- **[💳 Payment Integration](features/payments.md)** - Stripe checkout, webhooks, and security
+- **[📋 Order Management](features/order-management.md)** - Order lifecycle, tracking, and notifications
 
 ### 👨‍💻 Development
 Guides for developers working on the codebase.
 
-- **[Development Guide](development/development-guide.md)** - Codebase structure, workflows, and best practices
-- **[Testing Guide](development/testing.md)** - Unit, integration, and E2E testing strategies
-- **[Troubleshooting](development/troubleshooting.md)** - Common issues and solutions
+- **[🏗️ Development Guidelines](DEVELOPMENT_GUIDELINES.md)** - Complete development workflow and best practices
+- **[🔧 Development Guide](development/development-guide.md)** - Codebase structure and workflows
+- **[🧪 Testing Guide](development/testing.md)** - Unit, integration, and E2E testing strategies
+- **[🚨 Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** - Comprehensive issue resolution guide
 
 ### 📡 API Documentation
 Complete API reference and integration guides.
@@ -49,34 +54,40 @@ Guidelines for contributing to the project.
 
 ### I want to...
 
-**Get started quickly**
-→ [Quick Start Guide](getting-started/quick-start.md)
+**🚀 Get started quickly**
+→ [Getting Started Guide](GETTING_STARTED.md) → [Quick Start Guide](getting-started/quick-start.md)
 
-**Set up the development environment**
-→ [Installation Guide](getting-started/installation.md) → [Environment Setup](getting-started/environment-setup.md)
+**📖 Understand the application**
+→ [Project Overview](PROJECT_OVERVIEW.md) → [Architecture Overview](PROJECT_OVERVIEW.md#architecture-overview)
 
-**Understand how authentication works**
+**🏪 Learn about the distribution system**
+→ [Distribution System Documentation](DISTRIBUTION_SYSTEM.md)
+
+**🔧 Set up development environment**
+→ [Getting Started Guide](GETTING_STARTED.md) → [Environment Setup](getting-started/environment-setup.md)
+
+**🏗️ Follow development best practices**
+→ [Development Guidelines](DEVELOPMENT_GUIDELINES.md)
+
+**🚨 Troubleshoot an issue**
+→ [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)
+
+**🔐 Understand authentication**
 → [Authentication System](features/authentication.md)
 
-**Learn about payment processing**
+**💳 Learn about payment processing**
 → [Payment Integration](features/payments.md)
 
-**Understand the distributor application system**
-→ [Distributor System](features/distributor-system.md)
-
-**Deploy to production**
+**🚀 Deploy to production**
 → [Production Deployment](deployment/production-deployment.md)
 
-**Contribute to the project**
+**🤝 Contribute to the project**
 → [Contributing Guide](contributing/contributing-guide.md)
 
-**Troubleshoot an issue**
-→ [Troubleshooting Guide](development/troubleshooting.md)
-
-**Use the API**
+**📡 Use the API**
 → [API Overview](api/api-overview.md)
 
-**Write tests**
+**🧪 Write tests**
 → [Testing Guide](development/testing.md)
 
 ## 🛠️ Technology Stack
