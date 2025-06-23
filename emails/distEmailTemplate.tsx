@@ -7,11 +7,10 @@ import {
   Section,
   Text,
   Heading,
-  Hr,
-  Tailwind,
   Img,
   Row,
   Column,
+  Link,
 } from '@react-email/components';
 
 
@@ -34,211 +33,223 @@ interface DistributorApplicationProps {
   similarProductsDetails?: string;
   hearAboutUs?: string;
   hearAboutUsOther?: string;
+  acceptUrl?: string;
+  declineUrl?: string;
 }
 
 const ForceDownDistributorApplication = (props: DistributorApplicationProps) => {
   return (
     <Html lang="en" dir="ltr">
-      <Tailwind>
-        <Head />
-        <Body className="bg-white font-sans py-[40px]">
-          <Container className="bg-gray-900 mx-auto rounded-[12px] shadow-lg max-w-[700px] overflow-hidden">
-            
-            {/* Header with Logo */}
-            <Section className="bg-gradient-to-r from-blue-600 to-blue-800 px-[40px] py-[32px] text-center">
+      <Head />
+      <Body style={{ fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
+        <Container style={{ maxWidth: '600px', margin: '0 auto' }}>
+
+          {/* Header with Logo - matching order confirmation style */}
+          <Section style={{ backgroundColor: '#f8f4e3', padding: '20px', textAlign: 'center' }}>
+            <div style={{
+              display: 'inline-block',
+              backgroundColor: 'white',
+              padding: '15px',
+              borderRadius: '12px',
+              marginBottom: '15px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
               <Img
                 src="https://www.forcedowels.com/fdLogo.jpg"
                 alt="Force Dowels Logo"
-                className="w-full h-auto object-cover max-w-[600px] rounded-md mx-auto mb-[16px]"
+                style={{
+                  height: '60px',
+                  width: 'auto',
+                  display: 'block'
+                }}
               />
-              <Heading className="text-[24px] font-bold text-white m-0 mb-[8px]">
-                New Distributor Application
-              </Heading>
-              <Text className="text-[16px] text-blue-100 m-0">
-                Application submitted successfully
-              </Text>
-            </Section>
+            </div>
+            <Text style={{ color: '#666', fontSize: '16px', margin: '0' }}>
+              New Distributor Application
+            </Text>
+          </Section>
+
+          {/* Main Content */}
+          <Section style={{ padding: '20px' }}>
+            <Heading style={{ color: '#333', marginBottom: '20px', fontSize: '24px' }}>
+              New Distributor Application
+            </Heading>
+
+            <Text style={{ color: '#666', marginBottom: '20px' }}>
+              A new distributor application has been submitted for your review. Please find the details below:
+            </Text>
+
+            {/* Application Summary */}
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
+              <Heading style={{ color: '#333', marginTop: '0', fontSize: '18px' }}>Application Summary</Heading>
+              <Text style={{ color: '#666', margin: '0' }}>Business: {props.businessName || 'Not provided'}</Text>
+              <Text style={{ color: '#666', margin: '5px 0 0 0' }}>Contact: {props.fullName || 'Not provided'}</Text>
+              <Text style={{ color: '#666', margin: '5px 0 0 0' }}>Submitted: {new Date().toLocaleDateString()}</Text>
+            </div>
 
             {/* Contact Information */}
-            <Section className="px-[40px] py-[32px]">
-              <div className="bg-blue-50 rounded-[8px] p-[4px] mb-[24px]">
-                <Heading className="text-[20px] font-bold text-blue-900 m-0 px-[16px] py-[12px]">
-                  📋 Contact Information
-                </Heading>
-              </div>
-              
-              <Row className="mb-[16px]">
-                <Column className="w-1/2 pr-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      Full Name
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.fullName || 'Not provided'}
-                    </Text>
-                  </div>
+            <Heading style={{ color: '#333', marginTop: '30px', marginBottom: '15px', fontSize: '18px' }}>
+              Contact Information
+            </Heading>
+
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
+              <Row>
+                <Column style={{ width: '50%', paddingRight: '10px' }}>
+                  <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Full Name:</Text>
+                  <Text style={{ margin: '5px 0', color: '#666' }}>{props.fullName || 'Not provided'}</Text>
                 </Column>
-                <Column className="w-1/2 pl-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      Business Name
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.businessName || 'Not provided'}
-                    </Text>
-                  </div>
+                <Column style={{ width: '50%', paddingLeft: '10px' }}>
+                  <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Business Name:</Text>
+                  <Text style={{ margin: '5px 0', color: '#666' }}>{props.businessName || 'Not provided'}</Text>
                 </Column>
               </Row>
 
-              <Row className="mb-[16px]">
-                <Column className="w-1/2 pr-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      Phone Number
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.phoneNumber || 'Not provided'}
-                    </Text>
-                  </div>
+              <Row style={{ marginTop: '15px' }}>
+                <Column style={{ width: '50%', paddingRight: '10px' }}>
+                  <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Phone:</Text>
+                  <Text style={{ margin: '5px 0', color: '#666' }}>{props.phoneNumber || 'Not provided'}</Text>
                 </Column>
-                <Column className="w-1/2 pl-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      Email Address
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.emailAddress || 'Not provided'}
-                    </Text>
-                  </div>
+                <Column style={{ width: '50%', paddingLeft: '10px' }}>
+                  <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Email:</Text>
+                  <Text style={{ margin: '5px 0', color: '#666' }}>{props.emailAddress || 'Not provided'}</Text>
                 </Column>
               </Row>
 
-              <div className="bg-gray-50 rounded-[6px] p-[16px] mb-[16px]">
-                <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[8px]">
-                  Business Address
-                </Text>
-                <Text className="text-[16px] font-medium text-gray-900 m-0 mb-[4px]">
-                  {props.street || 'Street not provided'}
-                </Text>
-                <Text className="text-[16px] font-medium text-gray-900 m-0">
+              <div style={{ marginTop: '15px' }}>
+                <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Business Address:</Text>
+                <Text style={{ margin: '5px 0', color: '#666' }}>{props.street || 'Street not provided'}</Text>
+                <Text style={{ margin: '5px 0', color: '#666' }}>
                   {props.city || 'City'}, {props.state || 'State'} {props.zipCode || 'ZIP'}
                 </Text>
+                {props.website && (
+                  <>
+                    <Text style={{ margin: '10px 0 0 0', color: '#333', fontWeight: 'bold' }}>Website:</Text>
+                    <Text style={{ margin: '5px 0', color: '#d97706' }}>{props.website}</Text>
+                  </>
+                )}
               </div>
-
-              {props.website && (
-                <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                  <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                    Business Website
-                  </Text>
-                  <Text className="text-[16px] font-medium text-blue-600 m-0">
-                    {props.website}
-                  </Text>
-                </div>
-              )}
-            </Section>
-
-            <Hr className="border-gray-200 mx-[40px]" />
+            </div>
 
             {/* Business Details */}
-            <Section className="px-[40px] py-[32px]">
-              <div className="bg-green-50 rounded-[8px] p-[4px] mb-[24px]">
-                <Heading className="text-[20px] font-bold text-green-900 m-0 px-[16px] py-[12px]">
-                  🏢 Business Details
-                </Heading>
-              </div>
+            <Heading style={{ color: '#333', marginTop: '30px', marginBottom: '15px', fontSize: '18px' }}>
+              Business Details
+            </Heading>
 
-              <Row className="mb-[16px]">
-                <Column className="w-1/2 pr-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      Business Type
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.businessType || 'Not specified'}
-                    </Text>
-                  </div>
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
+              <Row>
+                <Column style={{ width: '50%', paddingRight: '10px' }}>
+                  <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Business Type:</Text>
+                  <Text style={{ margin: '5px 0', color: '#666' }}>{props.businessType || 'Not specified'}</Text>
                 </Column>
-                <Column className="w-1/2 pl-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      Years in Business
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.yearsInBusiness || 'Not provided'}
-                    </Text>
-                  </div>
+                <Column style={{ width: '50%', paddingLeft: '10px' }}>
+                  <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Years in Business:</Text>
+                  <Text style={{ margin: '5px 0', color: '#666' }}>{props.yearsInBusiness || 'Not provided'}</Text>
                 </Column>
               </Row>
 
-              <div className="bg-gray-50 rounded-[6px] p-[16px] mb-[16px]">
-                <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                  Territory / Coverage Area
-                </Text>
-                <Text className="text-[16px] font-medium text-gray-900 m-0">
-                  {props.territory || 'Not specified'}
-                </Text>
+              <div style={{ marginTop: '15px' }}>
+                <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Territory / Coverage Area:</Text>
+                <Text style={{ margin: '5px 0', color: '#666' }}>{props.territory || 'Not specified'}</Text>
               </div>
 
-              <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                  Estimated Monthly Purchase Volume
-                </Text>
-                <Text className="text-[16px] font-medium text-gray-900 m-0">
-                  {props.purchaseVolume || 'Not specified'}
-                </Text>
+              <div style={{ marginTop: '15px' }}>
+                <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Estimated Monthly Purchase Volume:</Text>
+                <Text style={{ margin: '5px 0', color: '#666' }}>{props.purchaseVolume || 'Not specified'}</Text>
               </div>
-            </Section>
-
-            <Hr className="border-gray-200 mx-[40px]" />
+            </div>
 
             {/* Additional Information */}
-            <Section className="px-[40px] py-[32px]">
-              <div className="bg-purple-50 rounded-[8px] p-[4px] mb-[24px]">
-                <Heading className="text-[20px] font-bold text-purple-900 m-0 px-[16px] py-[12px]">
-                  ℹ️ Additional Information
-                </Heading>
-              </div>
+            <Heading style={{ color: '#333', marginTop: '30px', marginBottom: '15px', fontSize: '18px' }}>
+              Additional Information
+            </Heading>
 
-              <div className="bg-gray-50 rounded-[6px] p-[16px] mb-[16px]">
-                <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                  Currently Sells Similar Products
-                </Text>
-                <Text className="text-[16px] font-medium text-gray-900 m-0 mb-[8px]">
-                  {props.sellsSimilarProducts || 'Not specified'}
-                </Text>
+            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
+              <div>
+                <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>Currently Sells Similar Products:</Text>
+                <Text style={{ margin: '5px 0', color: '#666' }}>{props.sellsSimilarProducts || 'Not specified'}</Text>
                 {props.similarProductsDetails && (
-                  <Text className="text-[14px] text-gray-600 m-0">
+                  <Text style={{ margin: '5px 0', color: '#666', fontSize: '14px' }}>
                     Details: {props.similarProductsDetails}
                   </Text>
                 )}
               </div>
 
-              <Row className="mb-[16px]">
-                <Column className="w-1/2 pr-[12px]">
-                  <div className="bg-gray-50 rounded-[6px] p-[16px]">
-                    <Text className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide m-0 mb-[4px]">
-                      How They Heard About Us
-                    </Text>
-                    <Text className="text-[16px] font-medium text-gray-900 m-0">
-                      {props.hearAboutUs || 'Not specified'}
-                    </Text>
+              <div style={{ marginTop: '15px' }}>
+                <Text style={{ margin: '0', color: '#333', fontWeight: 'bold' }}>How They Heard About Us:</Text>
+                <Text style={{ margin: '5px 0', color: '#666' }}>{props.hearAboutUs || 'Not specified'}</Text>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            {(props.acceptUrl || props.declineUrl) && (
+              <div style={{ marginTop: '30px' }}>
+                <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center' }}>
+                  <Heading style={{ color: '#065f46', marginTop: '0', marginBottom: '15px', fontSize: '18px' }}>
+                    Action Required
+                  </Heading>
+
+                  <Text style={{ color: '#065f46', marginBottom: '20px' }}>
+                    Please review this distributor application and choose your response:
+                  </Text>
+
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {props.acceptUrl && (
+                      <Link
+                        href={props.acceptUrl}
+                        style={{
+                          display: 'inline-block',
+                          backgroundColor: '#16a34a',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          padding: '12px 24px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          margin: '5px'
+                        }}
+                      >
+                        ✅ Accept Application
+                      </Link>
+                    )}
+                    {props.declineUrl && (
+                      <Link
+                        href={props.declineUrl}
+                        style={{
+                          display: 'inline-block',
+                          backgroundColor: '#dc2626',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          padding: '12px 24px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          margin: '5px'
+                        }}
+                      >
+                        ❌ Decline Application
+                      </Link>
+                    )}
                   </div>
-                </Column>
 
-              </Row>
-            </Section>
+                  <Text style={{ color: '#065f46', fontSize: '14px', marginTop: '15px', marginBottom: '0' }}>
+                    These links are secure and can only be used once. If you have any questions,
+                    please contact the applicant directly using the information provided above.
+                  </Text>
+                </div>
+              </div>
+            )}
 
-            {/* Footer */}
-            <Section className="bg-gray-800 px-[40px] py-[24px] text-center">
-              
-              <Text className="text-[12px] text-gray-400 m-0">
-                © 2025 Force Dowels. All rights reserved.
-              </Text>
-            </Section>
+          </Section>
+
+          {/* Footer */}
+          <Section style={{ backgroundColor: '#f8f4e3', padding: '20px', textAlign: 'center' }}>
+            <Text style={{ color: '#666', margin: '0', fontSize: '14px' }}>
+              © {new Date().getFullYear()} Force Dowels. All rights reserved.
+            </Text>
+          </Section>
 
           </Container>
         </Body>
-      </Tailwind>
     </Html>
   );
 };
@@ -259,7 +270,9 @@ ForceDownDistributorApplication.PreviewProps = {
   purchaseVolume: "1,000–5,000 units",
   sellsSimilarProducts: "Yes",
   similarProductsDetails: "Construction fasteners and hardware",
-  hearAboutUs: "Trade Show"
+  hearAboutUs: "Trade Show",
+  acceptUrl: "http://localhost:3000/distribution/accept/123e4567-e89b-12d3-a456-426614174000",
+  declineUrl: "http://localhost:3000/distribution/decline/123e4567-e89b-12d3-a456-426614174000"
 };
 
 export default ForceDownDistributorApplication;

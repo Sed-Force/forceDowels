@@ -28,6 +28,11 @@ export async function initializeDatabase() {
     // Import and initialize orders table
     const { initializeOrdersTable } = await import('./orders');
     await initializeOrdersTable();
+
+    // Import and initialize distribution tables
+    const { initializeDistributionTables } = await import('./distribution');
+    await initializeDistributionTables();
+
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Error initializing database', error);
