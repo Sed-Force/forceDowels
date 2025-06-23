@@ -67,15 +67,36 @@ export async function getZipCodeLocation(zipCode: string): Promise<ZipCodeLocati
   try {
     // Clean the ZIP code
     const cleanZip = zipCode.replace(/\D/g, '').slice(0, 5)
-    
+
     if (cleanZip.length !== 5) {
       return null
     }
-    
-    // In production, you would use a ZIP code database or API
-    // For now, use approximate coordinates for common ZIP codes
+
+    // First try USPS API for city/state lookup
+    try {
+      const { getCityStateFromZip } = await import('./usps')
+      const uspsResult = await getCityStateFromZip(cleanZip)
+
+      if (uspsResult.success && uspsResult.city && uspsResult.state) {
+        // Use a comprehensive ZIP code database for coordinates
+        const coordinates = await getZipCodeCoordinatesFromDatabase(cleanZip)
+
+        if (coordinates) {
+          return {
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            city: uspsResult.city,
+            state: uspsResult.state,
+            zipCode: cleanZip
+          }
+        }
+      }
+    } catch (uspsError) {
+      console.log('USPS lookup failed, falling back to local database:', uspsError)
+    }
+
+    // Fallback to local ZIP code database
     const location = getZipCodeCoordinates(cleanZip)
-    
     return location
   } catch (error) {
     console.error('Error getting ZIP code location:', error)
@@ -217,19 +238,82 @@ function getApproximateCoordinates(address: string): Coordinates {
 }
 
 /**
+ * Get coordinates from comprehensive ZIP code database
+ * This uses a more extensive database for better coverage
+ */
+async function getZipCodeCoordinatesFromDatabase(zipCode: string): Promise<Coordinates | null> {
+  try {
+    // You can replace this with a real ZIP code database API like:
+    // - ZipCodeAPI.com
+    // - Zippopotam.us (free)
+    // - GeoNames.org
+    // - Or a local database file
+
+    // For now, use the free Zippopotam.us API
+    const response = await fetch(`http://api.zippopotam.us/us/${zipCode}`)
+
+    if (response.ok) {
+      const data = await response.json()
+
+      if (data.places && data.places.length > 0) {
+        const place = data.places[0]
+        return {
+          latitude: parseFloat(place.latitude),
+          longitude: parseFloat(place.longitude)
+        }
+      }
+    }
+  } catch (error) {
+    console.log('External ZIP code API failed:', error)
+  }
+
+  return null
+}
+
+/**
  * Get coordinates for ZIP codes
  * This is a simplified system - use a real ZIP code database in production
  */
 function getZipCodeCoordinates(zipCode: string): ZipCodeLocation | null {
-  // Sample ZIP codes with coordinates
+  // Expanded ZIP codes database with more coverage
   const zipDatabase: Record<string, ZipCodeLocation> = {
+    // Arizona
     '85296': { latitude: 33.3528, longitude: -111.7890, city: 'Gilbert', state: 'AZ', zipCode: '85296' },
     '85001': { latitude: 33.4484, longitude: -112.0740, city: 'Phoenix', state: 'AZ', zipCode: '85001' },
     '85201': { latitude: 33.4152, longitude: -111.8315, city: 'Mesa', state: 'AZ', zipCode: '85201' },
     '85224': { latitude: 33.3062, longitude: -111.8413, city: 'Chandler', state: 'AZ', zipCode: '85224' },
+    '85251': { latitude: 33.4942, longitude: -111.9261, city: 'Scottsdale', state: 'AZ', zipCode: '85251' },
+    '85281': { latitude: 33.4255, longitude: -111.9400, city: 'Tempe', state: 'AZ', zipCode: '85281' },
+
+    // California
     '90210': { latitude: 34.0901, longitude: -118.4065, city: 'Beverly Hills', state: 'CA', zipCode: '90210' },
+    '90001': { latitude: 33.9731, longitude: -118.2479, city: 'Los Angeles', state: 'CA', zipCode: '90001' },
+    '92101': { latitude: 32.7157, longitude: -117.1611, city: 'San Diego', state: 'CA', zipCode: '92101' },
+    '94102': { latitude: 37.7749, longitude: -122.4194, city: 'San Francisco', state: 'CA', zipCode: '94102' },
+
+    // New York
     '10001': { latitude: 40.7505, longitude: -73.9934, city: 'New York', state: 'NY', zipCode: '10001' },
+    '10002': { latitude: 40.7156, longitude: -73.9877, city: 'New York', state: 'NY', zipCode: '10002' },
+
+    // Texas
+    '75201': { latitude: 32.7767, longitude: -96.7970, city: 'Dallas', state: 'TX', zipCode: '75201' },
+    '77001': { latitude: 29.7604, longitude: -95.3698, city: 'Houston', state: 'TX', zipCode: '77001' },
+    '78701': { latitude: 30.2672, longitude: -97.7431, city: 'Austin', state: 'TX', zipCode: '78701' },
+
+    // Florida
+    '33101': { latitude: 25.7617, longitude: -80.1918, city: 'Miami', state: 'FL', zipCode: '33101' },
+    '32801': { latitude: 28.5383, longitude: -81.3792, city: 'Orlando', state: 'FL', zipCode: '32801' },
+
+    // Nevada
+    '89101': { latitude: 36.1699, longitude: -115.1398, city: 'Las Vegas', state: 'NV', zipCode: '89101' },
+
+    // Colorado
+    '80201': { latitude: 39.7392, longitude: -104.9903, city: 'Denver', state: 'CO', zipCode: '80201' },
+
+    // Utah
+    '84101': { latitude: 40.7608, longitude: -111.8910, city: 'Salt Lake City', state: 'UT', zipCode: '84101' },
+    '84660': { latitude: 40.1149, longitude: -111.6549, city: 'Spanish Fork', state: 'UT', zipCode: '84660' },
   }
-  
+
   return zipDatabase[zipCode] || null
 }

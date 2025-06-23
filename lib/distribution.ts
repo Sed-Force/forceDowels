@@ -306,15 +306,17 @@ export async function findDistributorsNearLocation(
   try {
     // Using the Haversine formula to calculate distance
     const result = await query(`
-      SELECT *,
-        (3959 * acos(
-          cos(radians($1)) * cos(radians(latitude)) *
-          cos(radians(longitude) - radians($2)) +
-          sin(radians($1)) * sin(radians(latitude))
-        )) AS distance
-      FROM distributors
-      WHERE is_active = true
-      HAVING distance <= $3
+      SELECT * FROM (
+        SELECT *,
+          (3959 * acos(
+            cos(radians($1)) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians($2)) +
+            sin(radians($1)) * sin(radians(latitude))
+          )) AS distance
+        FROM distributors
+        WHERE is_active = true
+      ) AS distributors_with_distance
+      WHERE distance <= $3
       ORDER BY distance
     `, [latitude, longitude, radiusMiles])
 

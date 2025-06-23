@@ -2,10 +2,13 @@
 
 /**
  * Database Initialization Script
- * 
+ *
  * This script initializes the database for the Force Dowels application.
  * It creates the necessary tables and indexes for handling orders.
  */
+
+// Load environment variables from .env.local
+require('dotenv').config({ path: '.env.local' });
 
 const { Pool } = require('pg');
 

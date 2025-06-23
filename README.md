@@ -18,14 +18,26 @@ Force Dowels™ is a revolutionary cabinetry fastener system that transforms how
 - **Built for RTA Efficiency** - Strong, simple, and reliable assembly
 - **Professional Finish** - Flawless results every time
 
+## 📚 Documentation
+
+For comprehensive documentation, see the **[docs/](docs/)** directory:
+
+- **[📖 Project Overview](docs/PROJECT_OVERVIEW.md)** - Complete application architecture and features
+- **[🚀 Getting Started Guide](docs/GETTING_STARTED.md)** - Step-by-step setup for new developers
+- **[🏪 Distribution System](docs/DISTRIBUTION_SYSTEM.md)** - Complete distributor workflow documentation
+- **[🏗️ Development Guidelines](docs/DEVELOPMENT_GUIDELINES.md)** - Development best practices and workflows
+- **[🚨 Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** - Common issues and solutions
+- **[📋 Full Documentation Index](docs/README.md)** - Complete documentation navigation
+
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 - Stripe account (for payments)
 - Clerk account (for authentication)
 - Resend account (for emails)
+- PostgreSQL database (Neon recommended)
 
 ### Installation
 
