@@ -3,7 +3,7 @@ import { query } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🧹 Starting distributor cleanup via API...')
+    console.log('🧹 Starting distributor cleanup via API (v2)...')
 
     // Check current data counts
     console.log('1. Checking current data...')
