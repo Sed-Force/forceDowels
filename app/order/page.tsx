@@ -11,11 +11,11 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { Lock, Loader2, ShoppingCart, Plus, Minus } from "lucide-react"
+import { Lock, Loader2, ShoppingCart, Plus, Minus, Info } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { PRICING_TIERS, getTierInfo, formatNumber as formatNum, formatCurrency, formatExactPrice, isValidQuantityIncrement, roundToValidQuantity } from "@/lib/pricing"
 import Link from "next/link"
-import { Info } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function OrderPage() {
   const [quantity, setQuantity] = useState<number>(5000)
@@ -251,6 +251,21 @@ export default function OrderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {/* Ordering Requirements Notice */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                  >
+                    <Alert className="border-slate-200 bg-slate-50/50 shadow-sm">
+                      <Info className="h-4 w-4 text-slate-600" />
+                      <AlertDescription className="text-sm text-slate-700 leading-relaxed">
+                        <strong className="text-slate-900">Ordering Requirements:</strong> Force Dowels are available in 5,000-unit increments only.
+                        Minimum order quantity is 5,000 units, maximum is 960,000 units.
+                      </AlertDescription>
+                    </Alert>
+                  </motion.div>
+
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity (units)</Label>
                     <div className="flex items-center space-x-2">
