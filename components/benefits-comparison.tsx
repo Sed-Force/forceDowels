@@ -107,7 +107,7 @@ export function BenefitsComparison() {
           </p>
         </motion.div>
 
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           <div className="justify-center items-center">
             
             {/* Force Dowels Method */}
@@ -132,30 +132,30 @@ export function BenefitsComparison() {
                     Patent Pending
                   </Badge>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {comparisonData.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: index * 0.1 + 0.2 }}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100"
-                    >
-                      <div className="flex-shrink-0 mt-1">
-                        <Check className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">
-                          {item.feature}
-                        </h4>
-                        <p className="text-sm text-gray-700">
-                          {item.forceDowels.description}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </CardContent>
+               <CardContent className="space-y-4">
+  {comparisonData.map((item, index) => (
+    <motion.div
+      key={index}
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4, delay: index * 0.1 + 0.2 }}
+      className="flex flex-col items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100 text-center"
+    >
+      <div className="flex-shrink-0">
+        <Check className="h-5 w-5 text-green-600" />
+      </div>
+      <div>
+        <h4 className="font-semibold text-gray-900 mb-1">
+          {item.feature}
+        </h4>
+        <p className="text-sm text-gray-700">
+          {item.forceDowels.description}
+        </p>
+      </div>
+    </motion.div>
+  ))}
+</CardContent>
               </Card>
             </motion.div>
           </div>
