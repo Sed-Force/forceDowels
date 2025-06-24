@@ -7,6 +7,11 @@ export interface PricingTier {
   pricePerUnit: number
 }
 
+// Constants for quantity validation
+export const MIN_ORDER_QUANTITY = 5000
+export const MAX_ORDER_QUANTITY = 960000
+export const QUANTITY_INCREMENT = 5000
+
 // Define the pricing tiers with actual prices
 export const PRICING_TIERS: PricingTier[] = [
   { range: "5,000-20,000", min: 5000, max: 20000, pricePerUnit: 0.0720 },
@@ -98,6 +103,34 @@ export function formatCurrency(price: number): string {
 }
 
 /**
+ * Validate if a quantity meets the 5,000-unit increment requirement
+ * @param quantity - The quantity to validate
+ * @returns True if quantity is valid (multiple of 5,000, within min/max range)
+ */
+export function isValidQuantityIncrement(quantity: number): boolean {
+  if (quantity < MIN_ORDER_QUANTITY || quantity > MAX_ORDER_QUANTITY) {
+    return false
+  }
+  return quantity % QUANTITY_INCREMENT === 0
+}
+
+/**
+ * Round quantity to the nearest valid increment (5,000 units)
+ * @param quantity - The quantity to round
+ * @returns The rounded quantity within valid range
+ */
+export function roundToValidQuantity(quantity: number): number {
+  // Ensure within bounds
+  const boundedQuantity = Math.max(MIN_ORDER_QUANTITY, Math.min(MAX_ORDER_QUANTITY, quantity))
+
+  // Round to nearest increment
+  const rounded = Math.round(boundedQuantity / QUANTITY_INCREMENT) * QUANTITY_INCREMENT
+
+  // Ensure still within bounds after rounding
+  return Math.max(MIN_ORDER_QUANTITY, Math.min(MAX_ORDER_QUANTITY, rounded))
+}
+
+/**
  * Get tier information for display purposes
  * @param quantity - The quantity of units
  * @returns Object with tier info and pricing details
@@ -112,6 +145,9 @@ export function getTierInfo(quantity: number) {
     pricePerUnit,
     totalPrice,
     isValidQuantity: tier !== null,
-    minQuantity: PRICING_TIERS[0].min,
+    isValidIncrement: isValidQuantityIncrement(quantity),
+    minQuantity: MIN_ORDER_QUANTITY,
+    maxQuantity: MAX_ORDER_QUANTITY,
+    increment: QUANTITY_INCREMENT,
   }
 }

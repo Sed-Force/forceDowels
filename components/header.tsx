@@ -338,8 +338,12 @@ function HeaderContent() {
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button variant="outline" size="icon" className="border-white text-white hover:bg-white hover:text-gray-900">
-                    <Menu className="h-6 w-6" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="border-2 border-amber-400 bg-amber-400/10 text-amber-400 hover:bg-amber-400 hover:text-gray-900 transition-all duration-200"
+                  >
+                    <Menu className="h-5 w-5" />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </motion.div>

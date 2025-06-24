@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from "react"
-import { getPricingTier, calculatePricePerUnit } from "@/lib/pricing"
+import { getPricingTier, calculatePricePerUnit, roundToValidQuantity, isValidQuantityIncrement } from "@/lib/pricing"
 
 export interface CartItem {
   id: string
@@ -115,16 +115,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Update item quantity and recalculate tier and price
   const updateItemQuantity = (id: string, quantity: number) => {
+    // Round quantity to valid 5,000-unit increment
+    const validQuantity = roundToValidQuantity(quantity)
+
     setItems((prevItems) =>
       prevItems.map((item) => {
         if (item.id === id) {
           // Recalculate tier and price based on new quantity
-          const tier = getPricingTier(quantity)
-          const pricePerUnit = calculatePricePerUnit(quantity)
+          const tier = getPricingTier(validQuantity)
+          const pricePerUnit = calculatePricePerUnit(validQuantity)
 
           return {
             ...item,
-            quantity,
+            quantity: validQuantity,
             tier: tier?.range || item.tier,
             pricePerUnit: pricePerUnit || item.pricePerUnit,
           }

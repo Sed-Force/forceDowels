@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { Lock, Loader2, ShoppingCart } from "lucide-react"
+import { Lock, Loader2, ShoppingCart, Plus, Minus } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
-import { PRICING_TIERS, getTierInfo, formatNumber as formatNum, formatCurrency, formatExactPrice } from "@/lib/pricing"
+import { PRICING_TIERS, getTierInfo, formatNumber as formatNum, formatCurrency, formatExactPrice, isValidQuantityIncrement, roundToValidQuantity } from "@/lib/pricing"
 import Link from "next/link"
+import { Info } from "lucide-react"
 
 export default function OrderPage() {
   const [quantity, setQuantity] = useState<number>(5000)
@@ -31,10 +32,32 @@ export default function OrderPage() {
   // Handle quantity change
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number.parseInt(e.target.value.replace(/,/g, ""), 10) || 0
-    const newQuantity = Math.max(5000, value) // Ensure minimum quantity is 5000
+    const newQuantity = roundToValidQuantity(value) // Round to valid 5,000-unit increment
     setQuantity(newQuantity)
 
     // Update selected tier based on quantity using the pricing utility
+    const tierInfo = getTierInfo(newQuantity)
+    if (tierInfo.tier) {
+      setSelectedTier(tierInfo.tier)
+    }
+  }
+
+  // Handle quantity increment
+  const handleQuantityIncrement = () => {
+    const newQuantity = Math.min(960000, quantity + 5000)
+    setQuantity(newQuantity)
+
+    const tierInfo = getTierInfo(newQuantity)
+    if (tierInfo.tier) {
+      setSelectedTier(tierInfo.tier)
+    }
+  }
+
+  // Handle quantity decrement
+  const handleQuantityDecrement = () => {
+    const newQuantity = Math.max(5000, quantity - 5000)
+    setQuantity(newQuantity)
+
     const tierInfo = getTierInfo(newQuantity)
     if (tierInfo.tier) {
       setSelectedTier(tierInfo.tier)
@@ -59,6 +82,17 @@ export default function OrderPage() {
       }
 
       setIsSubmitting(true)
+
+      // Validate quantity increment
+      if (!isValidQuantityIncrement(quantity)) {
+        toast({
+          title: "Invalid quantity",
+          description: "Quantity must be in 5,000-unit increments (minimum 5,000 units; maximum 960,000 units).",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
 
       // Get the proper pricing based on quantity
       const tierInfo = getTierInfo(quantity)
@@ -157,7 +191,10 @@ export default function OrderPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <>
+        
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
               <motion.h2 className="text-2xl font-bold mb-6" variants={itemVariants}>
                 Pricing Tiers
@@ -217,6 +254,16 @@ export default function OrderPage() {
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity (units)</Label>
                     <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleQuantityDecrement}
+                        disabled={quantity <= 5000}
+                        className="h-10 w-10 shrink-0"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
                       <Input
                         id="quantity"
                         type="text"
@@ -224,6 +271,16 @@ export default function OrderPage() {
                         onChange={handleQuantityChange}
                         className="text-right"
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleQuantityIncrement}
+                        disabled={quantity >= 960000}
+                        className="h-10 w-10 shrink-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                       <span className="text-sm text-muted-foreground whitespace-nowrap">units</span>
                     </div>
                   </div>
@@ -289,6 +346,7 @@ export default function OrderPage() {
             </Card>
           </motion.div>
           </div>
+          </>
         )}
       </div>
     </motion.main>
