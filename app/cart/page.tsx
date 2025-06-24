@@ -8,9 +8,10 @@ import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trash2, ShoppingBag, Loader2, ArrowLeft } from "lucide-react"
+import { Trash2, ShoppingBag, Loader2, ArrowLeft, Plus, Minus } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import { formatCurrency, formatExactPrice, roundToValidQuantity, isValidQuantityIncrement } from "@/lib/pricing"
 
 
 export default function CartPage() {
@@ -73,10 +74,26 @@ export default function CartPage() {
 
   // Handle quantity change
   const handleQuantityChange = (id: string, value: string) => {
-    const quantity = parseInt(value.replace(/,/g, ""), 10)
-    if (!isNaN(quantity) && quantity > 0) {
-      updateItemQuantity(id, quantity)
+    const numericValue = parseInt(value.replace(/,/g, ""), 10) || 0
+
+    // Round to valid 5,000-unit increment
+    const validQuantity = roundToValidQuantity(numericValue)
+
+    if (validQuantity > 0) {
+      updateItemQuantity(id, validQuantity)
     }
+  }
+
+  // Handle quantity increment
+  const handleQuantityIncrement = (id: string, currentQuantity: number) => {
+    const newQuantity = Math.min(960000, currentQuantity + 5000)
+    updateItemQuantity(id, newQuantity)
+  }
+
+  // Handle quantity decrement
+  const handleQuantityDecrement = (id: string, currentQuantity: number) => {
+    const newQuantity = Math.max(5000, currentQuantity - 5000)
+    updateItemQuantity(id, newQuantity)
   }
 
   // Handle proceed to checkout
@@ -196,6 +213,16 @@ export default function CartPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleQuantityDecrement(item.id, item.quantity)}
+                          disabled={item.quantity <= 5000}
+                          className="h-8 w-8 shrink-0"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
                         <div className="w-28">
                           <Input
                             type="text"
@@ -205,6 +232,16 @@ export default function CartPage() {
                             aria-label="Quantity"
                           />
                         </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleQuantityIncrement(item.id, item.quantity)}
+                          disabled={item.quantity >= 960000}
+                          className="h-8 w-8 shrink-0"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
                         <div className="w-24 text-right">
                           {formatCurrency((item?.quantity || 0) * (item?.pricePerUnit || 0))}
                         </div>
