@@ -15,8 +15,8 @@ export const QUANTITY_INCREMENT = 5000
 // Define the pricing tiers with actual prices
 export const PRICING_TIERS: PricingTier[] = [
   { range: "5,000-20,000", min: 5000, max: 20000, pricePerUnit: 0.0720 },
-  { range: "20,001-160,000", min: 20001, max: 160000, pricePerUnit: 0.0675 },
-  { range: "160,001-960,000", min: 160001, max: 960000, pricePerUnit: 0.0630 },
+  { range: "<20,000-160,000", min: 20000, max: 160000, pricePerUnit: 0.0675 },
+  { range: "<160,000-960,000", min: 160000, max: 960000, pricePerUnit: 0.0630 },
 ]
 
 /**
