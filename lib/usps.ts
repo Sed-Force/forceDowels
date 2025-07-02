@@ -70,7 +70,7 @@ const USPS_BASE_URL = process.env.NODE_ENV === 'production'
 /**
  * Get the appropriate tier for a given quantity
  */
-function getTierForQuantity(quantity: number) {
+export function getTierForQuantity(quantity: number) {
   // Find the tier that can handle this quantity
   for (const tier of TIER_DATA) {
     if (quantity <= tier.maxQty) {
