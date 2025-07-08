@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -872,11 +871,7 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent>
                 {loadingShipping && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="py-12"
-                  >
+                  <div className="py-12">
                     <div className="text-center space-y-4">
                       <div className="relative inline-flex">
                         <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
@@ -891,16 +886,12 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* Enhanced progress indicator for freight shipping */}
                 {loadingShipping && shippingProgress.phase === 'fetching' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl"
-                  >
+                  <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         <Truck className="h-5 w-5 text-blue-600" />
@@ -914,15 +905,11 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {shippingError && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 rounded-xl mb-6 shadow-sm"
-                  >
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 rounded-xl mb-6 shadow-sm">
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0">
                         <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
@@ -944,18 +931,14 @@ export default function CheckoutPage() {
                         </Button>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* Enhanced shipping rates display */}
                 {shippingRates.length > 0 && (
                   <>
                     {shippingProvider.provider && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm"
-                      >
+                      <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className={`w-3 h-3 rounded-full ${
@@ -1019,43 +1002,18 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         )}
-                      </motion.div>
+                      </div>
                     )}
-                    <motion.div
-                      layout
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                    >
+                    <div className="transition-all duration-300 ease-in-out">
                       <RadioGroup
+                        key={`shipping-options-${showAllShippingOptions ? 'all' : 'top3'}`}
                         value={formState.shippingOption}
                         onValueChange={(value) => handleSelectChange("shippingOption", value)}
                         className="space-y-4"
                       >
-                        <AnimatePresence mode="popLayout">
-                          {displayedShippingRates.map((option: ShippingOption, index) => {
-                            // Only animate the newly visible items (beyond index 2) when expanding
-                            const shouldAnimateIn = showAllShippingOptions && index > 2
-
-                            return (
-                              <motion.div
-                                key={option.id}
-                                layout
-                                initial={shouldAnimateIn ? { opacity: 0, y: 10, scale: 0.95 } : { opacity: 1, y: 0, scale: 1 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{
-                                  opacity: 0,
-                                  y: -10,
-                                  scale: 0.95,
-                                  transition: {
-                                    duration: 0.15,
-                                    delay: index > 2 ? (displayedShippingRates.length - index) * 0.02 : 0, // Reverse order for exit
-                                    ease: "easeIn"
-                                  }
-                                }}
-                                transition={{
-                                  duration: 0.2,
-                                  delay: shouldAnimateIn ? (index - 3) * 0.03 : 0,
-                                  ease: "easeOut"
-                                }}
+                        {displayedShippingRates.map((option: ShippingOption) => (
+                          <div
+                            key={option.id}
                             className={`relative group cursor-pointer transition-all duration-200 ${
                               formState.shippingOption === option.id
                                 ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg'
@@ -1151,30 +1109,19 @@ export default function CheckoutPage() {
 
                               {/* Selected indicator */}
                               {formState.shippingOption === option.id && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg"
-                                >
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg transition-all duration-200">
                                   <CheckCircle2 className="h-4 w-4 text-white" />
-                                </motion.div>
+                                </div>
                               )}
                             </div>
-                          </motion.div>
-                          )
-                        })}
-                        </AnimatePresence>
+                          </div>
+                        ))}
                       </RadioGroup>
-                    </motion.div>
+                    </div>
 
                   {/* Enhanced "Show All Options" button */}
                   {shippingRates.length > 3 && !loadingShipping && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
-                      className="mt-6 text-center"
-                    >
+                    <div className="mt-6 text-center">
                       <Button
                         type="button"
                         variant="outline"
@@ -1217,16 +1164,13 @@ export default function CheckoutPage() {
                               `Show All ${shippingRates.length} Options`
                             )}
                           </span>
-                          <motion.div
-                            animate={{ rotate: showAllShippingOptions ? 180 : 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
+                          <div className="transition-transform duration-200">
                             {showAllShippingOptions ? (
                               <ChevronUp className="w-4 h-4" />
                             ) : (
                               <ChevronDown className="w-4 h-4" />
                             )}
-                          </motion.div>
+                          </div>
                         </div>
 
                         {/* Subtle background animation */}
@@ -1238,7 +1182,7 @@ export default function CheckoutPage() {
                           {shippingRates.length - 3} more shipping options available
                         </p>
                       )}
-                    </motion.div>
+                    </div>
                   )}
 
 
@@ -1246,11 +1190,7 @@ export default function CheckoutPage() {
                 )}
 
                 {!loadingShipping && shippingRates.length === 0 && !shippingError && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-12"
-                  >
+                  <div className="text-center py-12">
                     <div className="space-y-3">
                       <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
                         <Package className="h-8 w-8 text-gray-400" />
@@ -1262,7 +1202,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
               </CardContent>
             </Card>

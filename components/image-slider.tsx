@@ -62,9 +62,9 @@ export function ImageSlider() {
         description: 'Engineered for perfect alignment and strength'
       },
       {
-        filename: 'dowel-panel-side-shot.jpg',
+        filename: 'sideshot.png',
         title: 'Easy Installation',
-        description: 'Simple and efficient installation process'
+        description: 'Drill and Dowel System - Tested with drill and dowel machinery'
       },
       {
         filename: 'dowel-close-up-2.JPG',
