@@ -1,7 +1,7 @@
-# TQL Shipping API Implementation Guide for AI Agent
+# TQL Shipping API Implementation Guide
 
-## Project Overview
-Create a shipping calculator for a Next.js ecommerce project using TQL's LTL (Less Than Truckload) API.
+## Overview
+This guide covers the implementation of TQL's LTL (Less Than Truckload) API for Force Dowels shipping calculations.
 
 ## Step-by-Step Implementation Tasks
 

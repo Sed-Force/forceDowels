@@ -1,8 +1,6 @@
 # Force Dowels Documentation
 
-Welcome to the comprehensive documentation for the Force Dowels application. This documentation is organized to help you quickly find the information you need, whether you're getting started, developing features, or deploying to production.
-
-**📋 [Documentation Summary](DOCUMENTATION_SUMMARY.md)** - Overview of all documentation and how to use it effectively
+Welcome to the Force Dowels application documentation. This guide will help you get started, understand the system, and contribute to the project.
 
 ## 📚 Documentation Structure
 
@@ -10,8 +8,7 @@ Welcome to the comprehensive documentation for the Force Dowels application. Thi
 Perfect for new developers or setting up the project for the first time.
 
 - **[📖 Project Overview](PROJECT_OVERVIEW.md)** - Complete application overview and architecture
-- **[🚀 Getting Started Guide](GETTING_STARTED.md)** - Comprehensive setup guide for new developers
-- **[⚡ Quick Start Guide](getting-started/quick-start.md)** - Get up and running in under 5 minutes
+- **[⚡ Getting Started Guide](getting-started/quick-start.md)** - Get up and running quickly with setup instructions
 - **[📦 Installation Guide](getting-started/installation.md)** - Detailed setup instructions
 - **[⚙️ Environment Setup](getting-started/environment-setup.md)** - Configure all services and API keys
 
@@ -21,7 +18,8 @@ Detailed documentation for each major system in the application.
 - **[🏪 Distribution System](DISTRIBUTION_SYSTEM.md)** - Complete distributor workflow documentation
 - **[🔐 Authentication System](features/authentication.md)** - Clerk integration, custom pages, and security
 - **[💳 Payment Integration](features/payments.md)** - Stripe checkout, webhooks, and security
-- **[📋 Order Management](features/order-management.md)** - Order lifecycle, tracking, and notifications
+- **[📦 Shipping System](features/shipping.md)** - USPS and TQL freight shipping integration
+- **[📋 Distributor System](features/distributor-system.md)** - Distributor application system
 
 ### 👨‍💻 Development
 Guides for developers working on the codebase.
@@ -35,15 +33,11 @@ Guides for developers working on the codebase.
 Complete API reference and integration guides.
 
 - **[API Overview](api/api-overview.md)** - Base URLs, authentication, and response formats
-- **[Authentication API](api/authentication-api.md)** - Clerk integration endpoints
-- **[Payment API](api/payment-api.md)** - Stripe integration endpoints
-- **[Distributor API](api/distributor-api.md)** - Distributor application endpoints
 
 ### 🚀 Deployment
 Production deployment and maintenance guides.
 
 - **[Production Deployment](deployment/production-deployment.md)** - Vercel deployment, environment setup, and monitoring
-- **[Environment Configuration](deployment/environment-config.md)** - Production environment variables and security
 
 ### 🤝 Contributing
 Guidelines for contributing to the project.
@@ -55,16 +49,16 @@ Guidelines for contributing to the project.
 ### I want to...
 
 **🚀 Get started quickly**
-→ [Getting Started Guide](GETTING_STARTED.md) → [Quick Start Guide](getting-started/quick-start.md)
+→ [Getting Started Guide](getting-started/quick-start.md)
 
 **📖 Understand the application**
-→ [Project Overview](PROJECT_OVERVIEW.md) → [Architecture Overview](PROJECT_OVERVIEW.md#architecture-overview)
+→ [Project Overview](PROJECT_OVERVIEW.md)
 
 **🏪 Learn about the distribution system**
 → [Distribution System Documentation](DISTRIBUTION_SYSTEM.md)
 
 **🔧 Set up development environment**
-→ [Getting Started Guide](GETTING_STARTED.md) → [Environment Setup](getting-started/environment-setup.md)
+→ [Environment Setup](getting-started/environment-setup.md)
 
 **🏗️ Follow development best practices**
 → [Development Guidelines](DEVELOPMENT_GUIDELINES.md)
@@ -78,11 +72,11 @@ Guidelines for contributing to the project.
 **💳 Learn about payment processing**
 → [Payment Integration](features/payments.md)
 
+**📦 Learn about shipping system**
+→ [Shipping System](features/shipping.md)
+
 **🚀 Deploy to production**
 → [Production Deployment](deployment/production-deployment.md)
-
-**🤝 Contribute to the project**
-→ [Contributing Guide](contributing/contributing-guide.md)
 
 **📡 Use the API**
 → [API Overview](api/api-overview.md)
@@ -104,12 +98,16 @@ Guidelines for contributing to the project.
 - **Stripe** - Payment processing
 - **Resend** - Email delivery service
 - **React Email** - Email template system
+- **PostgreSQL** - Database (Neon recommended)
+
+### Shipping & Logistics
+- **USPS API** - Small package shipping (< 20K dowels)
+- **TQL Freight** - Large order shipping (≥ 20K dowels)
 
 ### Development Tools
 - **ESLint** - Code linting
-- **Prettier** - Code formatting
-- **Jest** - Testing framework
-- **Playwright** - End-to-end testing
+- **TypeScript** - Type checking
+- **Vercel** - Deployment platform
 
 ## 📋 Common Tasks
 
@@ -124,29 +122,32 @@ npm install
 cp .env.example .env.local
 # Edit .env.local with your API keys
 
+# Initialize database
+npm run db:init
+
 # Start development
 npm run dev
 ```
 
-### Running Tests
+### Database Management
 ```bash
-# Unit tests
-npm test
+# Initialize database tables
+npm run db:init
 
-# E2E tests
-npm run test:e2e
+# Check database status
+npm run db:status
 
-# Coverage report
-npm run test:coverage
+# Clean distributor data
+npm run db:clean-distributors
 ```
 
-### Building for Production
+### Environment Management
 ```bash
-# Build application
-npm run build
+# Check environment variables
+npm run env:check
 
-# Start production server
-npm run start
+# Verify all services are configured
+npm run dev
 ```
 
 ## 🆘 Getting Help
@@ -159,7 +160,7 @@ If you find issues with the documentation:
 
 ### Technical Support
 For technical issues:
-1. Check the [Troubleshooting Guide](development/troubleshooting.md)
+1. Check the [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)
 2. Search existing GitHub issues
 3. Create a new issue with detailed information
 
@@ -174,8 +175,8 @@ For new features or improvements:
 ### Keeping Documentation Updated
 - Documentation is updated with each feature release
 - Breaking changes are clearly marked
-- Deprecated features include migration guides
 - Examples are tested and verified
+- Regular cleanup of outdated content
 
 ### Contributing to Documentation
 - Documentation improvements are welcome
@@ -196,19 +197,18 @@ For new features or improvements:
 - **[Next.js Community](https://nextjs.org/community)** - Framework support
 - **[React Community](https://react.dev/community)** - React ecosystem
 
-## 📝 Documentation Changelog
+## 📝 Recent Documentation Updates
 
-### Recent Updates
-- **2024-01-15**: Complete documentation restructure and organization
-- **2024-01-10**: Added comprehensive API documentation
-- **2024-01-05**: Updated deployment guides for production
-- **2024-01-01**: Initial documentation structure
+### Latest Changes
+- **Documentation Cleanup**: Removed redundant files and fixed broken links
+- **EasyPost Removal**: Updated all documentation to reflect USPS + TQL shipping architecture
+- **Consolidated Guides**: Merged getting started documentation into comprehensive guide
+- **Updated Tech Stack**: Reflected current technology choices and integrations
 
-### Upcoming Changes
-- Enhanced API examples and use cases
-- Video tutorials for common workflows
-- Interactive documentation features
-- Multi-language support
+### Current Focus
+- Maintaining accurate, up-to-date documentation
+- Improving developer onboarding experience
+- Comprehensive troubleshooting resources
 
 ---
 
