@@ -39,6 +39,15 @@ export async function POST(request: NextRequest) {
       success_url: `${request.nextUrl.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/test-stripe?canceled=true`,
       customer_email: 'test@example.com',
+      // Enable automatic tax calculation
+      automatic_tax: {
+        enabled: true,
+      },
+      // Update customer addresses for better tax calculation
+      customer_update: {
+        address: 'auto', // Save billing address to customer
+        shipping: 'auto', // Save shipping address to customer
+      },
       metadata: {
         userId: 'test-user',
         userName: 'Test User',

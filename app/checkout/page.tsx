@@ -15,7 +15,7 @@ import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { calculateOrderTotalWithRate, ShippingOption } from "@/lib/shipping"
+import { ShippingOption } from "@/lib/shipping"
 
 export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -207,7 +207,7 @@ export default function CheckoutPage() {
     })
   }
 
-  // Validate address with USPS
+  // Basic address validation (removed USPS API validation)
   const validateAddress = async () => {
     // Check if we have enough address info to validate
     if (!formState.shippingAddress || !formState.shippingCity ||
@@ -217,59 +217,31 @@ export default function CheckoutPage() {
 
     setAddressValidation(prev => ({ ...prev, isValidating: true, error: null }))
 
-    try {
-      const response = await fetch('/api/address/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: {
-            name: formState.shippingName || 'Customer',
-            address: formState.shippingAddress,
-            city: formState.shippingCity,
-            state: formState.shippingState,
-            zip: formState.shippingZip,
-            country: formState.shippingCountry,
-          }
-        }),
+    // Simple client-side validation
+    const isValidZip = /^\d{5}(-\d{4})?$/.test(formState.shippingZip)
+    const isValidState = /^[A-Z]{2}$/.test(formState.shippingState.toUpperCase())
+    const hasValidAddress = formState.shippingAddress.trim().length >= 5
+    const hasValidCity = formState.shippingCity.trim().length >= 2
+
+    if (isValidZip && isValidState && hasValidAddress && hasValidCity) {
+      setAddressValidation({
+        isValidating: false,
+        isValid: true,
+        suggestions: null,
+        error: null
       })
+    } else {
+      const errors = []
+      if (!hasValidAddress) errors.push('Street address must be at least 5 characters')
+      if (!hasValidCity) errors.push('City must be at least 2 characters')
+      if (!isValidState) errors.push('State must be a valid 2-letter abbreviation')
+      if (!isValidZip) errors.push('ZIP code must be in format 12345 or 12345-6789')
 
-      const data = await response.json()
-
-      if (data.success) {
-        if (data.valid) {
-          setAddressValidation({
-            isValidating: false,
-            isValid: true,
-            suggestions: null,
-            error: null
-          })
-
-          // If address was standardized, optionally update the form
-          if (data.standardizedAddress) {
-            console.log('Address standardized:', data.standardizedAddress)
-            // Optionally auto-update form with standardized address
-            // setFormState(prev => ({ ...prev, ...data.standardizedAddress }))
-          }
-        } else {
-          setAddressValidation({
-            isValidating: false,
-            isValid: false,
-            suggestions: data.suggestions || null,
-            error: data.error || 'Address could not be validated'
-          })
-        }
-      } else {
-        throw new Error(data.error || 'Address validation failed')
-      }
-    } catch (error) {
-      console.error('Error validating address:', error)
       setAddressValidation({
         isValidating: false,
         isValid: false,
         suggestions: null,
-        error: error instanceof Error ? error.message : 'Failed to validate address'
+        error: errors.join(', ')
       })
     }
   }
@@ -457,14 +429,19 @@ export default function CheckoutPage() {
   }, [formState.shippingOption, showAllShippingOptions, userManuallyCollapsed, shippingRates, shippingRatesLoaded])
 
   // Calculate order total using useMemo for performance and consistency
+  // Note: Tax is now calculated automatically by Stripe, so we only calculate subtotal + shipping for display
   const orderTotal = useMemo(() => {
     // Get the selected shipping rate
     const selectedShippingRate = shippingRates.find(rate => rate.id === formState.shippingOption)
     const shippingCost = selectedShippingRate ? selectedShippingRate.price : 0
 
-    // Use shipping rate for calculation
-    return calculateOrderTotalWithRate(totalPrice, shippingCost, formState.shippingState || 'AZ')
-  }, [totalPrice, formState.shippingOption, formState.shippingState, shippingRates])
+    // Return subtotal and shipping only (tax will be calculated by Stripe)
+    return {
+      subtotal: totalPrice,
+      shipping: shippingCost,
+      total: totalPrice + shippingCost // Pre-tax total for display
+    }
+  }, [totalPrice, formState.shippingOption, shippingRates])
 
   // Handle form submission with Stripe
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -517,10 +494,14 @@ export default function CheckoutPage() {
     try {
       setIsSubmitting(true)
 
-      // Calculate final order total including shipping and tax
+      // Calculate final order total including shipping (tax will be calculated by Stripe)
       const selectedShippingRate = shippingRates.find(rate => rate.id === formState.shippingOption)
       const shippingCost = selectedShippingRate ? selectedShippingRate.price : 0
-      const finalOrderTotal = calculateOrderTotalWithRate(totalPrice, shippingCost, formState.shippingState || 'AZ')
+      const finalOrderTotal = {
+        subtotal: totalPrice,
+        shipping: shippingCost,
+        total: totalPrice + shippingCost // Pre-tax total
+      }
 
       console.log('Creating real order with total:', finalOrderTotal.total)
 
@@ -1250,7 +1231,7 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Proceed to Payment - ${formatPrice((orderTotal?.subtotal || 0) + (orderTotal?.shipping || 0))}
+                      Proceed to Payment - ${formatPrice(orderTotal?.total || 0)} + tax
                     </>
                   )}
                 </Button>

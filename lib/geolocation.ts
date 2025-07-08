@@ -72,27 +72,28 @@ export async function getZipCodeLocation(zipCode: string): Promise<ZipCodeLocati
       return null
     }
 
-    // First try USPS API for city/state lookup
-    try {
-      const { getCityStateFromZip } = await import('./usps')
-      const uspsResult = await getCityStateFromZip(cleanZip)
-
-      if (uspsResult.success && uspsResult.city && uspsResult.state) {
-        // Use a comprehensive ZIP code database for coordinates
-        const coordinates = await getZipCodeCoordinatesFromDatabase(cleanZip)
-
-        if (coordinates) {
-          return {
-            latitude: coordinates.latitude,
-            longitude: coordinates.longitude,
-            city: uspsResult.city,
-            state: uspsResult.state,
-            zipCode: cleanZip
+    // Use comprehensive ZIP code database for coordinates
+    const coordinates = await getZipCodeCoordinatesFromDatabase(cleanZip)
+    if (coordinates) {
+      // Try to get city/state from the database response
+      try {
+        const response = await fetch(`http://api.zippopotam.us/us/${cleanZip}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.places && data.places.length > 0) {
+            const place = data.places[0]
+            return {
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+              city: place['place name'],
+              state: place['state abbreviation'],
+              zipCode: cleanZip
+            }
           }
         }
+      } catch (error) {
+        console.log('External ZIP lookup failed, using coordinates only:', error)
       }
-    } catch (uspsError) {
-      console.log('USPS lookup failed, falling back to local database:', uspsError)
     }
 
     // Fallback to local ZIP code database
