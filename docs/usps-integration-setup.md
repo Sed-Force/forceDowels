@@ -162,7 +162,7 @@ The system uses predefined packaging tiers based on Force Dowels specifications:
 - **960,000 dowels** → 48 boxes/2 pallets → 40×48×36 inches per pallet → 4,000 lbs total
 
 ### Tier Selection Logic
-The system automatically selects the appropriate tier based on order quantity using the `getTierForQuantity()` function in `lib/usps.ts`. This ensures consistent packaging calculations across all shipping providers (USPS, TQL, EasyPost).
+The system automatically selects the appropriate tier based on order quantity using the `getTierForQuantity()` function in `lib/usps.ts`. This ensures consistent packaging calculations across all shipping providers (USPS, TQL).
 
 ## Troubleshooting
 
@@ -185,22 +185,7 @@ The system automatically selects the appropriate tier based on order quantity us
 
 Enable debug logging by checking the browser console and server logs for detailed API request/response information.
 
-## Migration from EasyPost
 
-The migration from EasyPost to USPS API is complete:
-
-- ✅ **API endpoints updated** to use USPS
-- ✅ **Rate calculation logic** adapted for USPS response format
-- ✅ **Error handling** updated for USPS error responses
-- ✅ **Fallback options** maintained for reliability
-- ✅ **Environment variables** updated
-
-### What Changed
-
-1. **New API service**: `lib/usps.ts` replaces `lib/easypost.ts`
-2. **Updated shipping API**: `app/api/shipping/rates/route.ts` uses USPS
-3. **Environment variables**: USPS credentials instead of EasyPost
-4. **Rate format**: Adapted to USPS API response structure
 
 ## Next Steps
 

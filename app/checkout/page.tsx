@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/cart-context"
 import { Loader2, ArrowLeft, CreditCard, Truck, RefreshCw, Clock, Package, CheckCircle2, Phone, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { usStates } from "@/lib/distributor-validation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ShippingOption } from "@/lib/shipping"
@@ -219,7 +220,7 @@ export default function CheckoutPage() {
 
     // Simple client-side validation
     const isValidZip = /^\d{5}(-\d{4})?$/.test(formState.shippingZip)
-    const isValidState = /^[A-Z]{2}$/.test(formState.shippingState.toUpperCase())
+    const isValidState = usStates.some(state => state.value === formState.shippingState)
     const hasValidAddress = formState.shippingAddress.trim().length >= 5
     const hasValidCity = formState.shippingCity.trim().length >= 2
 
@@ -642,13 +643,21 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <Label htmlFor="shippingState">State/Province</Label>
-                      <Input 
-                        id="shippingState" 
-                        name="shippingState" 
-                        value={formState.shippingState} 
-                        onChange={handleInputChange} 
-                        required 
-                      />
+                      <Select
+                        value={formState.shippingState}
+                        onValueChange={(value) => handleSelectChange("shippingState", value)}
+                      >
+                        <SelectTrigger id="shippingState">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {usStates.map((state) => (
+                            <SelectItem key={state.value} value={state.value}>
+                              {state.value} - {state.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
@@ -769,14 +778,22 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <Label htmlFor="billingState">State/Province</Label>
-                      <Input 
-                        id="billingState" 
-                        name="billingState" 
-                        value={formState.billingState} 
-                        onChange={handleInputChange} 
-                        required 
+                      <Select
+                        value={formState.billingState}
+                        onValueChange={(value) => handleSelectChange("billingState", value)}
                         disabled={formState.sameAsBilling}
-                      />
+                      >
+                        <SelectTrigger id="billingState">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {usStates.map((state) => (
+                            <SelectItem key={state.value} value={state.value}>
+                              {state.value} - {state.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
