@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { getUSPSShippingRates, ShippingAddress } from '@/lib/usps';
+import { UnifiedShippingService, UnifiedShippingAddress } from '@/lib/shipping-service';
 import { CartItem } from '@/contexts/cart-context';
 
 export async function POST(request: NextRequest) {
@@ -43,14 +43,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const totalQuantity = cartItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+    const expectedProvider = UnifiedShippingService.getProviderForQuantity(totalQuantity);
+
     console.log('Fetching shipping rates for:', {
       destination: `${shippingAddress.city}, ${shippingAddress.state}`,
       itemCount: cartItems.length,
-      totalQuantity: cartItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)
+      totalQuantity,
+      expectedProvider
     });
 
-    // Get shipping rates from USPS
-    const rates = await getUSPSShippingRates(shippingAddress as ShippingAddress, cartItems);
+    // Get shipping rates from appropriate provider (USPS or TQL)
+    const shippingService = new UnifiedShippingService();
+    const rates = await shippingService.getShippingRates(shippingAddress as UnifiedShippingAddress, cartItems);
+
+    // Determine actual provider used (may differ from expected if TQL failed)
+    const actualProvider = rates.length > 0 ? rates[0].provider : expectedProvider;
 
     // Filter and format rates for frontend
     const formattedRates = rates.map(rate => ({
@@ -62,20 +70,27 @@ export async function POST(request: NextRequest) {
       delivery_days: rate.delivery_days,
       delivery_date: rate.delivery_date,
       delivery_date_guaranteed: rate.delivery_date_guaranteed,
-      // Create a display name combining carrier and service
-      displayName: `${rate.carrier} ${rate.service}`,
-      // Estimate delivery time text
-      estimatedDelivery: rate.delivery_days 
-        ? `${rate.delivery_days} business day${rate.delivery_days > 1 ? 's' : ''}`
-        : rate.delivery_date 
-        ? `By ${new Date(rate.delivery_date).toLocaleDateString()}`
-        : 'Standard delivery'
+      provider: rate.provider,
+      // Use the displayName from unified service
+      displayName: rate.displayName,
+      // Use the estimatedDelivery from unified service
+      estimatedDelivery: rate.estimatedDelivery
     }));
 
-    console.log(`Found ${formattedRates.length} shipping options`);
+    console.log(`✅ Found ${formattedRates.length} shipping options:`, {
+      expectedProvider,
+      actualProvider,
+      totalQuantity,
+      fallbackUsed: expectedProvider !== actualProvider,
+      rates: formattedRates.map(r => ({ carrier: r.carrier, service: r.service, rate: r.rate, provider: r.provider }))
+    });
 
     return NextResponse.json({
       success: true,
+      provider: actualProvider,
+      expectedProvider,
+      totalQuantity,
+      fallbackUsed: expectedProvider !== actualProvider,
       rates: formattedRates
     });
 

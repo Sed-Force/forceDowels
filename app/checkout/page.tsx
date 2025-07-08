@@ -1,16 +1,17 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 import { useUser, useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/contexts/cart-context"
-import { Loader2, ArrowLeft, CreditCard, Truck } from "lucide-react"
+import { Loader2, ArrowLeft, CreditCard, Truck, RefreshCw, Clock, Package, CheckCircle2, Phone, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,7 +25,30 @@ export default function CheckoutPage() {
   const [userFormPrefilled, setUserFormPrefilled] = useState(false)
   const [shippingRates, setShippingRates] = useState<ShippingOption[]>([])
   const [loadingShipping, setLoadingShipping] = useState(false)
+  const [shippingRatesLoaded, setShippingRatesLoaded] = useState(false)
+  const [shippingProgress, setShippingProgress] = useState<{
+    phase: 'validating' | 'fetching' | 'complete';
+    message: string;
+    hasInitialRates: boolean;
+  }>({
+    phase: 'complete',
+    message: '',
+    hasInitialRates: false
+  })
   const [shippingError, setShippingError] = useState<string | null>(null)
+  const [shippingProvider, setShippingProvider] = useState<{
+    provider: 'USPS' | 'TQL' | null;
+    expectedProvider: 'USPS' | 'TQL' | null;
+    totalQuantity: number;
+    fallbackUsed: boolean;
+  }>({
+    provider: null,
+    expectedProvider: null,
+    totalQuantity: 0,
+    fallbackUsed: false
+  })
+  const [showAllShippingOptions, setShowAllShippingOptions] = useState(false)
+  const [userManuallyCollapsed, setUserManuallyCollapsed] = useState(false)
   const [addressValidation, setAddressValidation] = useState<{
     isValidating: boolean;
     isValid: boolean | null;
@@ -62,7 +86,7 @@ export default function CheckoutPage() {
 
     // Options
     sameAsBilling: true,
-    shippingOption: "standard",
+    shippingOption: "",
   })
 
   // Prefill form with user information if available (only once)
@@ -102,12 +126,24 @@ export default function CheckoutPage() {
     }
   }, []) // Remove dependencies to prevent loops - only check on mount
 
+  // Clear shipping rates when address changes
+  useEffect(() => {
+    // Reset shipping rates when address changes
+    setShippingRates([])
+    setShippingRatesLoaded(false)
+    setShowAllShippingOptions(false)
+    setUserManuallyCollapsed(false) // Reset manual collapse flag when address changes
+  }, [formState.shippingAddress, formState.shippingCity, formState.shippingState, formState.shippingZip, formState.shippingCountry])
+
   // Validate address and fetch shipping rates when address changes
   useEffect(() => {
     const timer = setTimeout(() => {
       // First validate address, then fetch shipping rates
       validateAddress()
-      fetchShippingRates()
+      // Only fetch shipping rates if we haven't loaded them yet and not currently loading
+      if (!shippingRatesLoaded && !loadingShipping) {
+        fetchShippingRates()
+      }
     }, 1500) // Debounce API calls - longer delay for validation + shipping
 
     return () => clearTimeout(timer)
@@ -239,18 +275,46 @@ export default function CheckoutPage() {
     }
   }
 
-  // Fetch shipping rates from USPS
-  const fetchShippingRates = async () => {
+
+
+  // Convert rate data to ShippingOption format
+  const formatShippingRate = (rate: any): ShippingOption => ({
+    id: rate.id,
+    name: rate.displayName || `${rate.carrier} ${rate.service}`,
+    description: rate.estimatedDelivery || 'Standard delivery',
+    price: rate.rate,
+    estimatedDays: rate.estimatedDelivery || '',
+    carrier: rate.carrier,
+    service: rate.service,
+    delivery_date: rate.delivery_date,
+    delivery_date_guaranteed: rate.delivery_date_guaranteed
+  })
+
+  // Fetch shipping rates (with prevention of multiple calls)
+  const fetchShippingRates = async (forceRefresh = false) => {
     // Check if we have enough address info to fetch rates
     if (!formState.shippingAddress || !formState.shippingCity ||
         !formState.shippingState || !formState.shippingZip) {
       return
     }
 
+    // Prevent multiple calls unless forced refresh
+    if (shippingRatesLoaded && !forceRefresh) {
+      return
+    }
+
     setLoadingShipping(true)
     setShippingError(null)
+    setShippingRates([]) // Clear existing rates
+    setShippingRatesLoaded(false)
+    setShippingProgress({
+      phase: 'validating',
+      message: 'Validating address...',
+      hasInitialRates: false
+    })
 
     try {
+      // Get shipping rates
       const response = await fetch('/api/shipping/rates', {
         method: 'POST',
         headers: {
@@ -272,36 +336,72 @@ export default function CheckoutPage() {
       const data = await response.json()
 
       if (data.success && data.rates) {
-        // Convert USPS rates to our ShippingOption format
-        const formattedRates: ShippingOption[] = data.rates.map((rate: any) => ({
-          id: rate.id,
-          name: rate.displayName || `${rate.carrier} ${rate.service}`,
-          description: rate.estimatedDelivery || 'Standard delivery',
-          price: rate.rate,
-          estimatedDays: rate.estimatedDelivery || '',
-          carrier: rate.carrier,
-          service: rate.service,
-          delivery_date: rate.delivery_date,
-          delivery_date_guaranteed: rate.delivery_date_guaranteed
-        }))
+        setShippingProgress({
+          phase: 'complete',
+          message: '',
+          hasInitialRates: true
+        })
 
-        setShippingRates(formattedRates)
+        // Convert shipping rates to our ShippingOption format
+        const formattedRates: ShippingOption[] = data.rates.map(formatShippingRate)
+
+        // Sort rates by price (cheapest first)
+        const sortedRates = formattedRates.sort((a, b) => {
+          // If one is "Contact for Quote" (price = 0), put it at the end
+          if (a.price === 0 && b.price !== 0) return 1
+          if (b.price === 0 && a.price !== 0) return -1
+          if (a.price === 0 && b.price === 0) return 0
+
+          // Normal price sorting (cheapest first)
+          return a.price - b.price
+        })
+
+        // Set all rates immediately - pagination will be handled by display logic
+        setShippingRates(sortedRates)
+
+        // Store provider information for display
+        setShippingProvider({
+          provider: data.provider,
+          expectedProvider: data.expectedProvider,
+          totalQuantity: data.totalQuantity,
+          fallbackUsed: data.fallbackUsed || false
+        })
+
+        // Reset the show all options state when new rates are loaded - do this BEFORE auto-selection
+        setShowAllShippingOptions(false)
+        setUserManuallyCollapsed(false) // Reset manual collapse flag for new rates
 
         // Auto-select the first (cheapest) option if no option is selected
-        if (!formState.shippingOption && formattedRates.length > 0) {
+        if (!formState.shippingOption && sortedRates.length > 0) {
           setFormState(prev => ({
             ...prev,
-            shippingOption: formattedRates[0].id
+            shippingOption: sortedRates[0].id
           }))
         }
+        // Mark shipping rates as loaded
+        setShippingRatesLoaded(true)
+        // Stop loading indicator - SUCCESS PATH FIX
+        setLoadingShipping(false)
       } else {
-        throw new Error(data.error || 'Failed to fetch USPS shipping rates')
+        throw new Error(data.error || 'Failed to fetch shipping rates')
       }
+
     } catch (error) {
-      console.error('Error fetching USPS shipping rates:', error)
+      console.error('Error fetching shipping rates:', error)
       setShippingRates([])
+      setShippingProvider({
+        provider: null,
+        expectedProvider: null,
+        totalQuantity: 0,
+        fallbackUsed: false
+      })
+      setShippingProgress({
+        phase: 'complete',
+        message: '',
+        hasInitialRates: false
+      })
       setShippingError(error instanceof Error ? error.message : 'Failed to get shipping rates. Please check your address and try again.')
-    } finally {
+      // Stop loading indicator - ERROR PATH (already present)
       setLoadingShipping(false)
     }
   }
@@ -316,13 +416,54 @@ export default function CheckoutPage() {
     return price.toFixed(2)
   }
 
+  // Calculate displayed shipping rates (top 3 by default, or all if expanded)
+  const displayedShippingRates = useMemo(() => {
+    if (shippingRates.length === 0) return []
+
+    // During progressive loading, we might have all rates loaded but want to show only top 3
+    // unless user has explicitly requested to see all options
+    const result = showAllShippingOptions ? shippingRates : shippingRates.slice(0, 3)
+    console.log('displayedShippingRates:', {
+      totalRates: shippingRates.length,
+      showAllShippingOptions,
+      displayedCount: result.length
+    })
+    return result
+  }, [shippingRates, showAllShippingOptions])
+
+
+
+  // Check if selected option is not in top 3 and auto-expand if needed
+  // Only expand if user manually selected an option that's not in top 3 AND user hasn't manually collapsed
+  useEffect(() => {
+    if (formState.shippingOption && !showAllShippingOptions && !userManuallyCollapsed && shippingRates.length > 3 && shippingRatesLoaded) {
+      const top3Rates = shippingRates.slice(0, 3)
+      const selectedOptionInTop3 = top3Rates.some(rate => rate.id === formState.shippingOption)
+
+      console.log('Auto-expansion check:', {
+        selectedOption: formState.shippingOption,
+        firstOptionId: shippingRates[0]?.id,
+        selectedOptionInTop3,
+        showAllShippingOptions,
+        userManuallyCollapsed,
+        totalRates: shippingRates.length
+      })
+
+      // Only auto-expand if the selected option is not in top 3 AND it's not the auto-selected first option
+      if (!selectedOptionInTop3 && formState.shippingOption !== shippingRates[0]?.id) {
+        console.log('Auto-expanding shipping options')
+        setShowAllShippingOptions(true)
+      }
+    }
+  }, [formState.shippingOption, showAllShippingOptions, userManuallyCollapsed, shippingRates, shippingRatesLoaded])
+
   // Calculate order total using useMemo for performance and consistency
   const orderTotal = useMemo(() => {
-    // Get the selected shipping rate from USPS rates only
+    // Get the selected shipping rate
     const selectedShippingRate = shippingRates.find(rate => rate.id === formState.shippingOption)
     const shippingCost = selectedShippingRate ? selectedShippingRate.price : 0
 
-    // Use USPS shipping rate for calculation
+    // Use shipping rate for calculation
     return calculateOrderTotalWithRate(totalPrice, shippingCost, formState.shippingState || 'AZ')
   }, [totalPrice, formState.shippingOption, formState.shippingState, shippingRates])
 
@@ -572,7 +713,7 @@ export default function CheckoutPage() {
 
                 {addressValidation.isValid === true && (
                   <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                    <p className="text-sm text-green-800">✓ Address validated with USPS</p>
+                    <p className="text-sm text-green-800">✓ Address validated</p>
                   </div>
                 )}
 
@@ -700,58 +841,428 @@ export default function CheckoutPage() {
                   <Truck className="h-5 w-5 mr-2" />
                   Shipping Options
                 </CardTitle>
+                {shippingProvider.provider && (
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          shippingProvider.provider === 'USPS' ? 'bg-blue-500' : 'bg-green-500'
+                        }`}></div>
+                        <span className="font-medium">
+                          {shippingProvider.provider === 'USPS' ? 'USPS Shipping' : 'LTL Freight Shipping'}
+                        </span>
+                      </div>
+                      <span className="text-gray-600">
+                        {shippingProvider.totalQuantity.toLocaleString()} dowels
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {shippingProvider.provider === 'USPS'
+                        ? 'Standard parcel delivery for orders up to 5,000 dowels'
+                        : 'Professional freight delivery for bulk orders over 5,000 dowels'
+                      }
+                      {shippingProvider.fallbackUsed && (
+                        <span className="text-amber-600 ml-1">
+                          • Using fallback shipping method
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {loadingShipping && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span>Loading shipping options...</span>
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="py-12"
+                  >
+                    <div className="text-center space-y-4">
+                      <div className="relative inline-flex">
+                        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                        <div className="absolute inset-0 h-8 w-8 animate-ping rounded-full bg-amber-400 opacity-20"></div>
+                      </div>
+                      <div>
+                        <p className="text-lg font-medium text-gray-800">
+                          {shippingProgress.message || 'Loading shipping options...'}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Finding the best rates for your delivery
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Enhanced progress indicator for freight shipping */}
+                {loadingShipping && shippingProgress.phase === 'fetching' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <Truck className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">
+                          Getting freight quotes from multiple carriers
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          This may take a moment to find the best rates for your bulk order
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
 
                 {shippingError && (
-                  <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
-                    <p className="text-sm text-yellow-800">{shippingError}</p>
-                  </div>
-                )}
-
-                {!loadingShipping && shippingRates.length > 0 && (
-                  <RadioGroup
-                    key="shipping-options"
-                    value={formState.shippingOption}
-                    onValueChange={(value) => handleSelectChange("shippingOption", value)}
-                    className="space-y-3"
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 rounded-xl mb-6 shadow-sm"
                   >
-                    {shippingRates.map((option: ShippingOption) => (
-                      <div key={option.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
-                        <RadioGroupItem value={option.id} id={option.id} />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={option.id} className="font-medium cursor-pointer">
-                              {option.name}
-                            </Label>
-                            <span className="font-medium">
-                              ${formatPrice(option.price)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {option.description} {option.estimatedDays && `• ${option.estimatedDays}`}
-                          </p>
-                          {option.carrier && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              via {option.carrier} {option.service && `- ${option.service}`}
-                            </p>
-                          )}
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
                         </div>
                       </div>
-                    ))}
-                  </RadioGroup>
+                      <div>
+                        <p className="text-sm font-medium text-red-800">Shipping Error</p>
+                        <p className="text-sm text-red-700 mt-1">{shippingError}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchShippingRates(true)}
+                          className="mt-3 text-red-600 border-red-300 hover:bg-red-50"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Try Again
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Enhanced shipping rates display */}
+                {shippingRates.length > 0 && (
+                  <>
+                    {shippingProvider.provider && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              shippingProvider.provider === 'USPS' ? 'bg-blue-500' : 'bg-green-500'
+                            } shadow-sm`}></div>
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="font-semibold text-gray-800">
+                                  {shippingProvider.provider === 'USPS' ? 'USPS Shipping' : 'LTL Freight Shipping'}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {shippingRates.length} option{shippingRates.length !== 1 ? 's' : ''}
+                                </Badge>
+                                {!showAllShippingOptions && shippingRates.length > 3 && (
+                                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">
+                                    Showing top 3
+                                  </Badge>
+                                )}
+                                {shippingRatesLoaded && (
+                                  <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Loaded
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {shippingProvider.provider === 'TQL'
+                                  ? 'Professional freight carriers for your bulk order. Rates include pickup and delivery to commercial addresses with loading docks.'
+                                  : 'Standard USPS delivery options for your order.'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-700">
+                                {shippingProvider.totalQuantity.toLocaleString()} dowels
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {shippingProvider.provider === 'USPS' ? 'Parcel delivery' : 'Freight delivery'}
+                              </p>
+                            </div>
+                            {shippingRatesLoaded && !loadingShipping && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => fetchShippingRates(true)}
+                                className="text-gray-600 hover:text-gray-800 hover:bg-white/50 transition-colors"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {shippingProvider.fallbackUsed && (
+                          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-700 flex items-center">
+                              <Package className="h-3 w-3 mr-1" />
+                              Using fallback shipping method
+                            </p>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                    <motion.div
+                      layout
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                    >
+                      <RadioGroup
+                        value={formState.shippingOption}
+                        onValueChange={(value) => handleSelectChange("shippingOption", value)}
+                        className="space-y-4"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {displayedShippingRates.map((option: ShippingOption, index) => {
+                            // Only animate the newly visible items (beyond index 2) when expanding
+                            const shouldAnimateIn = showAllShippingOptions && index > 2
+
+                            return (
+                              <motion.div
+                                key={option.id}
+                                layout
+                                initial={shouldAnimateIn ? { opacity: 0, y: 10, scale: 0.95 } : { opacity: 1, y: 0, scale: 1 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{
+                                  opacity: 0,
+                                  y: -10,
+                                  scale: 0.95,
+                                  transition: {
+                                    duration: 0.15,
+                                    delay: index > 2 ? (displayedShippingRates.length - index) * 0.02 : 0, // Reverse order for exit
+                                    ease: "easeIn"
+                                  }
+                                }}
+                                transition={{
+                                  duration: 0.2,
+                                  delay: shouldAnimateIn ? (index - 3) * 0.03 : 0,
+                                  ease: "easeOut"
+                                }}
+                            className={`relative group cursor-pointer transition-all duration-200 ${
+                              formState.shippingOption === option.id
+                                ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg'
+                                : 'hover:shadow-md hover:border-gray-300'
+                            }`}
+                          >
+                            <div className={`p-5 border-2 rounded-xl transition-all duration-200 ${
+                              formState.shippingOption === option.id
+                                ? 'border-amber-500 bg-amber-50/50'
+                                : 'border-gray-200 bg-white hover:bg-gray-50/50'
+                            }`}>
+                              <div className="flex items-start space-x-4">
+                                <div className="flex-shrink-0 mt-1">
+                                  <RadioGroupItem
+                                    value={option.id}
+                                    id={option.id}
+                                    className={`${
+                                      formState.shippingOption === option.id
+                                        ? 'border-amber-500 text-amber-500'
+                                        : ''
+                                    }`}
+                                  />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1">
+                                      <Label
+                                        htmlFor={option.id}
+                                        className="font-semibold text-gray-900 cursor-pointer text-base leading-tight"
+                                      >
+                                        {option.name}
+                                      </Label>
+                                      {option.carrier && (
+                                        <div className="flex items-center space-x-2 mt-1">
+                                          <Badge
+                                            variant="outline"
+                                            className={`text-xs ${
+                                              option.carrier === 'USPS'
+                                                ? 'border-blue-300 text-blue-700 bg-blue-50'
+                                                : 'border-green-300 text-green-700 bg-green-50'
+                                            }`}
+                                          >
+                                            {option.carrier}
+                                          </Badge>
+                                          {option.service && (
+                                            <span className="text-xs text-gray-500">
+                                              {option.service}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="text-right ml-4">
+                                      {option.price === 0 ? (
+                                        <div className="text-right">
+                                          <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
+                                            Contact for Quote
+                                          </Badge>
+                                        </div>
+                                      ) : (
+                                        <div className="text-right">
+                                          <span className="text-xl font-bold text-gray-900">
+                                            ${formatPrice(option.price)}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <p className="text-sm text-gray-600 leading-relaxed">
+                                      {option.description}
+                                    </p>
+
+                                    {option.estimatedDays && (
+                                      <div className="flex items-center text-sm text-gray-500">
+                                        <Clock className="h-4 w-4 mr-1.5" />
+                                        <span>{option.estimatedDays}</span>
+                                      </div>
+                                    )}
+
+                                    {option.price === 0 && (
+                                      <div className="flex items-center text-sm text-amber-600 font-medium bg-amber-50 p-2 rounded-lg border border-amber-200">
+                                        <Phone className="h-4 w-4 mr-2" />
+                                        <span>Call (480) 581-7145 for freight shipping quote</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Selected indicator */}
+                              {formState.shippingOption === option.id && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 text-white" />
+                                </motion.div>
+                              )}
+                            </div>
+                          </motion.div>
+                          )
+                        })}
+                        </AnimatePresence>
+                      </RadioGroup>
+                    </motion.div>
+
+                  {/* Enhanced "Show All Options" button */}
+                  {shippingRates.length > 3 && !loadingShipping && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="mt-6 text-center"
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="default"
+                        data-expand-button
+                        onClick={() => {
+                          const newShowAll = !showAllShippingOptions
+                          console.log('Button clicked:', {
+                            currentShowAll: showAllShippingOptions,
+                            newShowAll,
+                            totalRates: shippingRates.length,
+                            currentDisplayed: displayedShippingRates.length
+                          })
+                          setShowAllShippingOptions(newShowAll)
+                          // If user is collapsing (going from true to false), mark as manually collapsed
+                          // If user is expanding (going from false to true), reset the manual collapse flag
+                          if (!newShowAll) {
+                            setUserManuallyCollapsed(true)
+                          } else {
+                            setUserManuallyCollapsed(false)
+                            // When expanding, scroll to keep the button area in view after animation
+                            setTimeout(() => {
+                              const button = document.querySelector('[data-expand-button]')
+                              if (button) {
+                                button.scrollIntoView({
+                                  behavior: 'smooth',
+                                  block: 'center'
+                                })
+                              }
+                            }, 300) // Wait for animation to start
+                          }
+                        }}
+                        className="group relative px-6 py-3 text-blue-600 border-2 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 rounded-xl shadow-sm hover:shadow-md"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">
+                            {showAllShippingOptions ? (
+                              `Show Top 3 Options`
+                            ) : (
+                              `Show All ${shippingRates.length} Options`
+                            )}
+                          </span>
+                          <motion.div
+                            animate={{ rotate: showAllShippingOptions ? 180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            {showAllShippingOptions ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </motion.div>
+                        </div>
+
+                        {/* Subtle background animation */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl -z-10" />
+                      </Button>
+
+                      {!showAllShippingOptions && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          {shippingRates.length - 3} more shipping options available
+                        </p>
+                      )}
+                    </motion.div>
+                  )}
+
+
+                  </>
                 )}
 
                 {!loadingShipping && shippingRates.length === 0 && !shippingError && (
-                  <div className="text-center py-4 text-gray-500">
-                    <p>Enter your shipping address to see available shipping options</p>
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-12"
+                  >
+                    <div className="space-y-3">
+                      <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-medium text-gray-700">Ready for shipping options</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Enter your shipping address above to see available delivery options
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
               </CardContent>
             </Card>
@@ -784,12 +1295,17 @@ export default function CheckoutPage() {
                 <Button
                   type="submit"
                   className="w-full bg-amber-600 hover:bg-amber-700"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (shippingRates.find(rate => rate.id === formState.shippingOption)?.price === 0)}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Creating checkout session...
+                    </>
+                  ) : shippingRates.find(rate => rate.id === formState.shippingOption)?.price === 0 ? (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Contact for Freight Quote - (480) 581-7145
                     </>
                   ) : (
                     <>
@@ -821,6 +1337,24 @@ export default function CheckoutPage() {
                     <p className="font-medium">${formatPrice((item?.quantity || 0) * (item?.pricePerUnit || 0))}</p>
                   </div>
                 ))}
+
+                {/* Shipping Method Info */}
+                {shippingProvider.provider && (
+                  <div className="pt-2 pb-2 border-b">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Shipping Method:</span>
+                      <span className="font-medium">
+                        {shippingProvider.provider === 'USPS' ? 'USPS Parcel' : 'LTL Freight'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {shippingProvider.provider === 'USPS'
+                        ? 'Standard delivery for orders up to 5,000 dowels'
+                        : 'Professional freight delivery for bulk orders'
+                      }
+                    </p>
+                  </div>
+                )}
 
                 {/* Order Calculations */}
                 <div className="space-y-2 pt-4 border-t">
