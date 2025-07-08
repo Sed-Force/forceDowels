@@ -65,20 +65,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Add tax as a line item if there's tax
-    if (orderTotal?.tax?.amount > 0) {
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: 'Tax',
-            description: `Sales tax (${(orderTotal.tax.rate * 100).toFixed(1)}%)`,
-          },
-          unit_amount: formatAmountForStripe(orderTotal.tax.amount),
-        },
-        quantity: 1,
-      })
-    }
+    // Note: Tax is now handled automatically by Stripe, so we don't add it as a line item
 
     // Get user email
     const userEmail = user.emailAddresses?.[0]?.emailAddress || ''
@@ -91,6 +78,15 @@ export async function POST(request: NextRequest) {
       success_url: `${request.nextUrl.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/checkout?canceled=true`,
       customer_email: userEmail,
+      // Enable automatic tax calculation
+      automatic_tax: {
+        enabled: true,
+      },
+      // Update customer addresses for better tax calculation
+      customer_update: {
+        address: 'auto', // Save billing address to customer
+        shipping: 'auto', // Save shipping address to customer
+      },
       // ACH-specific configuration
       payment_method_options: {
         us_bank_account: {
@@ -107,8 +103,7 @@ export async function POST(request: NextRequest) {
         shippingOption: shippingOption || 'standard',
         subtotal: orderTotal?.subtotal?.toString() || '0',
         shippingCost: orderTotal?.shipping?.toString() || '0',
-        taxAmount: orderTotal?.tax?.amount?.toString() || '0',
-        taxRate: orderTotal?.tax?.rate?.toString() || '0',
+        // Remove manual tax fields since Stripe will calculate automatically
         orderTotal: orderTotal?.total?.toString() || '0',
       },
       shipping_address_collection: {

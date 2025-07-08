@@ -143,13 +143,22 @@ async function handleSuccessfulPayment(session: any) {
   const billingInfo = JSON.parse(metadata.billingInfo || '{}')
   const cartItems = JSON.parse(metadata.cartItems || '[]')
 
-  // Extract order details from metadata
+  // Extract order details from metadata and session
   const shippingOption = metadata.shippingOption || 'standard'
   const subtotal = parseFloat(metadata.subtotal || '0')
   const shippingCost = parseFloat(metadata.shippingCost || '0')
-  const taxAmount = parseFloat(metadata.taxAmount || '0')
-  const taxRate = parseFloat(metadata.taxRate || '0')
-  const orderTotal = parseFloat(metadata.orderTotal || '0')
+
+  // Get tax information from Stripe's automatic tax calculation
+  const taxAmount = session.total_details?.amount_tax ? session.total_details.amount_tax / 100 : 0
+  const orderTotal = session.amount_total ? session.amount_total / 100 : parseFloat(metadata.orderTotal || '0')
+
+  console.log('💰 Tax calculation details:', {
+    stripeTaxAmount: session.total_details?.amount_tax,
+    calculatedTaxAmount: taxAmount,
+    stripeTotal: session.amount_total,
+    calculatedTotal: orderTotal,
+    totalDetails: session.total_details
+  })
 
   console.log('Creating single comprehensive order with details:', {
     itemCount: cartItems.length,
@@ -181,8 +190,9 @@ async function handleSuccessfulPayment(session: any) {
         subtotal: subtotal,
         shippingCost: shippingCost,
         taxAmount: taxAmount,
-        taxRate: taxRate,
-        orderTotal: orderTotal
+        orderTotal: orderTotal,
+        // Store Stripe's tax details for reference
+        stripeTaxDetails: session.total_details
       }
     },
     paymentStatus: 'pending',
