@@ -1,6 +1,7 @@
 // EasyPost shipping service for calculating real-time shipping rates
 import EasyPost from '@easypost/api';
 import { CartItem } from '@/contexts/cart-context';
+import { getTierForQuantity } from './usps';
 
 // Initialize EasyPost client
 const easypost = new EasyPost(process.env.EASYPOST_API_KEY!);
@@ -32,13 +33,8 @@ export interface ShipmentDimensions {
   weight: number;
 }
 
-// Default dimensions for Force Dowels (you may need to adjust these)
-const DEFAULT_DOWEL_DIMENSIONS = {
-  length: 12, // inches
-  width: 1,   // inches
-  height: 1,  // inches
-  weight: 0.1 // pounds per dowel
-};
+// Note: Package dimensions are now calculated using TIER_DATA from usps.ts
+// This ensures consistency across all shipping providers
 
 // Your business address (from address for shipping calculations)
 const FROM_ADDRESS = {
@@ -51,31 +47,32 @@ const FROM_ADDRESS = {
 };
 
 /**
- * Calculate package dimensions and weight based on cart items
+ * Calculate package dimensions and weight based on cart items using tier data
+ * Uses the same tier system as USPS and TQL for consistency
  */
 function calculatePackageDimensions(items: CartItem[]): ShipmentDimensions {
   const totalDowels = items.reduce((sum, item) => sum + item.quantity, 0);
-  
-  // Estimate package dimensions based on quantity
-  // This is a simplified calculation - you may need to adjust based on actual packaging
-  const weight = totalDowels * DEFAULT_DOWEL_DIMENSIONS.weight;
-  
-  // For simplicity, assume dowels are bundled in packages
-  // Adjust these calculations based on your actual packaging
-  let length = DEFAULT_DOWEL_DIMENSIONS.length;
-  let width = Math.ceil(Math.sqrt(totalDowels)) * DEFAULT_DOWEL_DIMENSIONS.width;
-  let height = Math.ceil(Math.sqrt(totalDowels)) * DEFAULT_DOWEL_DIMENSIONS.height;
-  
-  // Ensure minimum package dimensions
-  length = Math.max(length, 6);
-  width = Math.max(width, 6);
-  height = Math.max(height, 1);
-  
+
+  // Get the appropriate tier for this quantity
+  const tier = getTierForQuantity(totalDowels);
+
+  // Use tier dimensions and weight
+  const [length, width, height] = tier.dimsIn;
+  const weight = tier.weightLbs;
+
+  console.log(`EasyPost package estimation for ${totalDowels} dowels using tier "${tier.tierName}":`, {
+    dimensions: `${length}" x ${width}" x ${height}"`,
+    weight: `${weight} lbs`,
+    packageType: tier.pkgType,
+    packageCount: tier.pkgCount,
+    tier: tier.tierName
+  });
+
   return {
     length,
     width,
     height,
-    weight: Math.max(weight, 0.1) // Minimum weight
+    weight
   };
 }
 

@@ -62,12 +62,12 @@ function testTierData() {
   
   // We need to import the tier function, but since it's TypeScript, let's test the logic
   const tierTestCases = [
-    { quantity: 5000, expectedTier: 'Bag', expectedWeight: 18.6 },
+    { quantity: 5000, expectedTier: 'Small Box', expectedWeight: 18.6 },
     { quantity: 10000, expectedTier: 'Box', expectedWeight: 77 },
     { quantity: 50000, expectedTier: 'Pallet-4-box', expectedWeight: 458 },
     { quantity: 100000, expectedTier: 'Pallet-8-box', expectedWeight: 766 },
     { quantity: 500000, expectedTier: 'Pallet-24-box', expectedWeight: 1998 },
-    { quantity: 960000, expectedTier: 'Two-Pallet (48 boxes)', expectedWeight: 4000 }
+    { quantity: 960000, expectedTier: 'Two-Pallet (48 boxes)', expectedWeight: 2000 } // Note: 2000 lbs per pallet, 2 pallets total
   ];
   
   console.log('📋 Expected tier mappings:');

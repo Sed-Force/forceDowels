@@ -146,25 +146,21 @@ The integration includes comprehensive error handling:
 
 ## Package Size Estimation
 
-The system automatically calculates package dimensions based on dowel quantity:
+The system uses predefined packaging tiers based on Force Dowels specifications:
 
-### Small Orders (1-10 dowels)
-- Single layer bundle arrangement
-- Minimal packaging
+### Packaging Tiers (Quantity → Package Type → Dimensions → Weight)
+- **5,000 dowels** → Small box → 15×15×10 inches → 18.6 lbs
+- **20,000 dowels** → Box → 20×20×12 inches → 77 lbs
+- **80,000 dowels** → 4 boxes/1 pallet → 40×48×6 inches → 458 lbs
+- **160,000 dowels** → 8 boxes/1 pallet → 40×48×12 inches → 766 lbs
+- **240,000 dowels** → 12 boxes/1 pallet → 40×48×18 inches → 1,074 lbs
+- **320,000 dowels** → 16 boxes/1 pallet → 40×48×24 inches → 1,382 lbs
+- **400,000 dowels** → 20 boxes/1 pallet → 40×48×30 inches → 1,690 lbs
+- **480,000 dowels** → 24 boxes/1 pallet → 40×48×36 inches → 1,998 lbs
+- **960,000 dowels** → 48 boxes/2 pallets → 40×48×36 inches per pallet → 4,000 lbs total
 
-### Medium Orders (11-50 dowels)
-- Grid pattern arrangement
-- Standard box packaging
-
-### Large Orders (50+ dowels)
-- Compact multi-layer arrangement
-- Heavy-duty packaging
-
-### Packaging Calculations
-- **Dowel Weight**: 0.05 lbs per dowel (update in `lib/usps.ts`)
-- **Packaging Weight**: 0.5 lbs for box and padding
-- **Minimum Weight**: 1 lb total
-- **Padding**: 2 inches added to all dimensions
+### Tier Selection Logic
+The system automatically selects the appropriate tier based on order quantity using the `getTierForQuantity()` function in `lib/usps.ts`. This ensures consistent packaging calculations across all shipping providers (USPS, TQL, EasyPost).
 
 ## Troubleshooting
 
