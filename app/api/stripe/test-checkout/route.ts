@@ -40,13 +40,9 @@ export async function POST(request: NextRequest) {
       cancel_url: `${request.nextUrl.origin}/test-stripe?canceled=true`,
       customer_email: 'test@example.com',
       // Enable automatic tax calculation
+      // Stripe will calculate tax based on shipping address (if collected) or billing address
       automatic_tax: {
         enabled: true,
-      },
-      // Update customer addresses for better tax calculation
-      customer_update: {
-        address: 'auto', // Save billing address to customer
-        shipping: 'auto', // Save shipping address to customer
       },
       metadata: {
         userId: 'test-user',

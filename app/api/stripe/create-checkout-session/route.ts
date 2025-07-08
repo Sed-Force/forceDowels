@@ -79,13 +79,9 @@ export async function POST(request: NextRequest) {
       cancel_url: `${request.nextUrl.origin}/checkout?canceled=true`,
       customer_email: userEmail,
       // Enable automatic tax calculation
+      // Stripe will calculate tax based on shipping address (if collected) or billing address
       automatic_tax: {
         enabled: true,
-      },
-      // Update customer addresses for better tax calculation
-      customer_update: {
-        address: 'auto', // Save billing address to customer
-        shipping: 'auto', // Save shipping address to customer
       },
       // ACH-specific configuration
       payment_method_options: {
