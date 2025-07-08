@@ -60,11 +60,11 @@ export class UnifiedShippingService {
     console.log(`Getting shipping rates for ${totalQuantity} dowels`);
 
     // Route to appropriate provider based on quantity
-    if (totalQuantity <= 5000) {
-      // Use USPS for 5K orders
+    if (totalQuantity < 20000) {
+      // Use USPS for orders under 20K (5K, 10K, 15K tiers)
       return this.getUSPSRates(toAddress, cartItems);
     } else {
-      // Try TQL for orders > 5K, fall back with weight check
+      // Try TQL for orders >= 20K, fall back with weight check
       try {
         console.log(`Attempting TQL shipping for ${totalQuantity} dowels...`);
         const tqlRates = await this.getTQLRates(toAddress, cartItems);
@@ -107,9 +107,9 @@ export class UnifiedShippingService {
           }];
         }
 
-        // For all TQL failures on orders >5K, recommend manual calculation
+        // For all TQL failures on orders >=20K, recommend manual calculation
         console.error(`❌ TQL freight shipping failed for ${totalQuantity} dowels (${tier.weightLbs} lbs)`);
-        console.error(`💡 Orders >5K dowels require LTL freight shipping - manual quote needed`);
+        console.error(`💡 Orders >=20K dowels require LTL freight shipping - manual quote needed`);
 
         // Return a manual quote option for all TQL failures
         return [{
@@ -214,7 +214,7 @@ export class UnifiedShippingService {
    * Determine which provider should be used for a given quantity
    */
   static getProviderForQuantity(quantity: number): 'USPS' | 'TQL' {
-    return quantity <= 5000 ? 'USPS' : 'TQL';
+    return quantity < 20000 ? 'USPS' : 'TQL';
   }
 
   /**

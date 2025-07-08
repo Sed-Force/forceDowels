@@ -153,7 +153,7 @@ export function transformCartToTQLQuote(
   // Get tier data for packaging (reuse from USPS logic)
   const tier = getTierForQuantity(totalQuantity);
 
-  // For Force Dowels, all orders >5K are palletized
+  // For Force Dowels, all orders >=20K are palletized
   const tqlItems: TQLItem[] = [{
     description: `Force Dowels - ${totalQuantity.toLocaleString()} units (${tier.tierName})`,
     weight: tier.weightLbs,
@@ -162,7 +162,7 @@ export function transformCartToTQLQuote(
     dimensionHeight: tier.dimsIn[2],
     quantity: tier.pkgCount, // Number of pallets (1 or 2)
     freightClassCode: determineFreightClass(tier.weightLbs, tier.dimsIn),
-    unitTypeCode: tier.pkgType === 'PALLET' ? 'PLT' : 'BOX', // Will be PLT for all >5K orders
+    unitTypeCode: tier.pkgType === 'PALLET' ? 'PLT' : 'BOX', // Will be PLT for all >=20K orders
     nmfc: '161030', // NMFC code for wooden dowels/rods
     isHazmat: false, // Force Dowels are not hazardous
     isStackable: true // Pallets can be stacked (saves freight costs)

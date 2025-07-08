@@ -7,9 +7,11 @@ function testProviderRouting() {
   // Test cases for different quantities
   const testCases = [
     { quantity: 5000, expectedProvider: 'USPS', description: 'Exactly 5K dowels' },
-    { quantity: 4999, expectedProvider: 'USPS', description: 'Just under 5K dowels' },
-    { quantity: 5001, expectedProvider: 'TQL', description: 'Just over 5K dowels' },
-    { quantity: 10000, expectedProvider: 'TQL', description: '10K dowels' },
+    { quantity: 10000, expectedProvider: 'USPS', description: '10K dowels' },
+    { quantity: 15000, expectedProvider: 'USPS', description: '15K dowels' },
+    { quantity: 19999, expectedProvider: 'USPS', description: 'Just under 20K dowels' },
+    { quantity: 20000, expectedProvider: 'TQL', description: 'Exactly 20K dowels' },
+    { quantity: 20001, expectedProvider: 'TQL', description: 'Just over 20K dowels' },
     { quantity: 50000, expectedProvider: 'TQL', description: '50K dowels' },
     { quantity: 100000, expectedProvider: 'TQL', description: '100K dowels' },
     { quantity: 500000, expectedProvider: 'TQL', description: '500K dowels' },
@@ -63,7 +65,9 @@ function testTierData() {
   // We need to import the tier function, but since it's TypeScript, let's test the logic
   const tierTestCases = [
     { quantity: 5000, expectedTier: 'Small Box', expectedWeight: 18.6 },
-    { quantity: 10000, expectedTier: 'Box', expectedWeight: 77 },
+    { quantity: 10000, expectedTier: 'Medium Box', expectedWeight: 38 },
+    { quantity: 15000, expectedTier: 'Large Box', expectedWeight: 56.6 },
+    { quantity: 20000, expectedTier: 'Box', expectedWeight: 77 },
     { quantity: 50000, expectedTier: 'Pallet-4-box', expectedWeight: 458 },
     { quantity: 100000, expectedTier: 'Pallet-8-box', expectedWeight: 766 },
     { quantity: 500000, expectedTier: 'Pallet-24-box', expectedWeight: 1998 },
@@ -88,8 +92,8 @@ try {
   console.log('\n🏁 Provider Routing Test Summary:');
   if (routingPassed) {
     console.log('✅ Provider routing logic is working correctly!');
-    console.log('✅ Orders ≤5K dowels will use USPS');
-    console.log('✅ Orders >5K dowels will use TQL');
+    console.log('✅ Orders <20K dowels will use USPS');
+    console.log('✅ Orders ≥20K dowels will use TQL');
   } else {
     console.log('❌ Provider routing logic has issues that need to be fixed');
   }

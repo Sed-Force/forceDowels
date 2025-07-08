@@ -35,6 +35,10 @@ export interface USPSPackageDimensions {
 export const TIER_DATA = [
   { tierName: "Small Box",             maxQty: 5_000,     pkgCount: 1,
     pkgType: "BOX",    weightLbs:  18.6, dimsIn: [15, 15, 10] },   // 1 small box
+  { tierName: "Medium Box",            maxQty: 10_000,    pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  38,   dimsIn: [18, 18, 11] },   // 1 medium box
+  { tierName: "Large Box",             maxQty: 15_000,    pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  56.6, dimsIn: [19, 19, 12] },   // 1 large box (18.6 + 38 = 56.6 lbs)
   { tierName: "Box",                   maxQty: 20_000,    pkgCount: 1,
     pkgType: "BOX",    weightLbs:  77,   dimsIn: [20, 20, 12] },   // 1 box
   { tierName: "Pallet-4-box",          maxQty: 80_000,    pkgCount: 1,

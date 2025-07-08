@@ -150,6 +150,8 @@ The system uses predefined packaging tiers based on Force Dowels specifications:
 
 ### Packaging Tiers (Quantity → Package Type → Dimensions → Weight)
 - **5,000 dowels** → Small box → 15×15×10 inches → 18.6 lbs
+- **10,000 dowels** → Medium box → 18×18×11 inches → 38 lbs
+- **15,000 dowels** → Large box → 19×19×12 inches → 56.6 lbs
 - **20,000 dowels** → Box → 20×20×12 inches → 77 lbs
 - **80,000 dowels** → 4 boxes/1 pallet → 40×48×6 inches → 458 lbs
 - **160,000 dowels** → 8 boxes/1 pallet → 40×48×12 inches → 766 lbs
