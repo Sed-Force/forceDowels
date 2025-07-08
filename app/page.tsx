@@ -4,10 +4,7 @@ import { motion } from "framer-motion"
 import { Check } from "lucide-react"
 import { useEffect, useState } from "react"
 import { BlockInTextCard } from "@/components/block-in-text-card"
-import { AnimatedStats } from "@/components/animated-stats"
-import { TestimonialsCarousel } from "@/components/testimonials-carousel"
 import { BenefitsComparison } from "@/components/benefits-comparison"
-import { InteractiveGallery } from "@/components/interactive-gallery"
 import { ImageSlider } from "@/components/image-slider"
 
 export default function Home() {
@@ -135,8 +132,8 @@ export default function Home() {
       </div>
 
       {/* New Dynamic Sections */}
-      <BlockInTextCard />
       <BenefitsComparison />
+      <BlockInTextCard />
     </motion.main>
   )
 }
