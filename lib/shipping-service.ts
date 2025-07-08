@@ -32,12 +32,12 @@ export class UnifiedShippingService {
   
   // Force Dowel Company origin address (B2B commercial facility)
   private readonly originAddress: TQLAddress = {
-    name: "Force Dowel Company",
-    streetAddress: "4455 E Nunneley Rd, Ste 103",
     city: "Gilbert",
     state: "AZ",
     postalCode: "85296",
-    country: "US",
+    country: "USA",
+    name: "Force Dowel Company",
+    streetAddress: "4455 E Nunneley Rd, Ste 103",
     contactName: "Shipping Department",
     contactPhone: "4805817145", // (480) 581-7145
     hoursOpen: "7:30 AM",
@@ -76,6 +76,36 @@ export class UnifiedShippingService {
         // Check if the package is too heavy for USPS (70 lb limit)
         const tier = getTierForQuantity(totalQuantity);
         console.log(`📦 Package details for ${totalQuantity} dowels: ${tier.tierName}, ${tier.weightLbs} lbs`);
+
+        // Check if this is a TQL authentication/configuration issue or location issue
+        if (error.message.includes('TQL authentication failed') ||
+            error.message.includes('Failed to authenticate with TQL API') ||
+            error.message.includes('LOCATION_MISMATCH') ||
+            error.message.includes('Please enter a valid city') ||
+            error.message.includes('postal code/ country combination')) {
+
+          const issueType = error.message.includes('LOCATION_MISMATCH') || error.message.includes('Please enter a valid city') || error.message.includes('postal code/ country combination')
+            ? 'location not serviced'
+            : 'authentication issue';
+
+          console.warn(`🔧 TQL ${issueType} detected - providing manual quote option`);
+          console.log(`🔧 Full error message: ${error.message}`);
+
+          // Return a manual quote option for TQL orders when TQL fails
+          return [{
+            id: 'tql_manual_quote',
+            service: 'Manual Quote Required',
+            carrier: 'LTL Freight',
+            rate: 0, // Will be quoted manually
+            currency: 'USD',
+            delivery_days: 5,
+            delivery_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            delivery_date_guaranteed: false,
+            provider: 'TQL' as const,
+            displayName: 'LTL Freight - Manual Quote Required',
+            estimatedDelivery: 'Contact for quote: (480) 581-7145'
+          }];
+        }
 
         if (tier.weightLbs > 70) {
           console.error(`❌ Package too heavy for USPS fallback: ${tier.weightLbs} lbs (USPS limit: 70 lbs)`);
@@ -141,12 +171,12 @@ export class UnifiedShippingService {
     cartItems: CartItem[]
   ): Promise<UnifiedShippingRate[]> {
     const tqlDestination: TQLAddress = {
-      name: toAddress.name,
-      streetAddress: toAddress.address,
       city: toAddress.city,
       state: toAddress.state,
       postalCode: toAddress.zip,
-      country: toAddress.country
+      country: toAddress.country === 'US' ? 'USA' : (toAddress.country || 'USA'), // Normalize US to USA for TQL
+      name: toAddress.name,
+      streetAddress: toAddress.address
     };
 
     const quoteRequest = transformCartToTQLQuote(
@@ -157,21 +187,21 @@ export class UnifiedShippingService {
 
     const tqlResponse = await this.tqlService.createQuote(quoteRequest);
 
-    if (!tqlResponse.success || !tqlResponse.content.rates) {
+    if (!tqlResponse.content.carrierPrices || tqlResponse.content.carrierPrices.length === 0) {
       throw new Error('TQL API returned no rates');
     }
 
-    return tqlResponse.content.rates.map((rate: TQLRate, index: number) => ({
+    return tqlResponse.content.carrierPrices.map((rate: TQLRate, index: number) => ({
       id: `tql_${tqlResponse.content.quoteId}_${index}`,
-      service: rate.serviceType,
-      carrier: rate.carrierName,
-      rate: rate.totalCost,
+      service: rate.serviceLevel,
+      carrier: rate.carrier,
+      rate: rate.customerRate,
       currency: 'USD',
       delivery_days: rate.transitDays,
-      delivery_date: rate.estimatedDeliveryDate,
+      delivery_date: null, // TQL doesn't provide specific delivery dates
       delivery_date_guaranteed: false, // TQL doesn't guarantee delivery dates
       provider: 'TQL' as const,
-      displayName: `${rate.carrierName} ${rate.serviceType}`,
+      displayName: `${rate.carrier} ${rate.serviceLevel}`,
       estimatedDelivery: `${rate.transitDays} business days`
     }));
   }

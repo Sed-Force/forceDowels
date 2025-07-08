@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useUser, useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/contexts/cart-context"
-import { Loader2, ArrowLeft, CreditCard, Truck } from "lucide-react"
+import { Loader2, ArrowLeft, CreditCard, Truck, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,7 +24,30 @@ export default function CheckoutPage() {
   const [userFormPrefilled, setUserFormPrefilled] = useState(false)
   const [shippingRates, setShippingRates] = useState<ShippingOption[]>([])
   const [loadingShipping, setLoadingShipping] = useState(false)
+  const [shippingRatesLoaded, setShippingRatesLoaded] = useState(false)
+  const [loadingAdditionalRates, setLoadingAdditionalRates] = useState(false)
+  const [shippingProgress, setShippingProgress] = useState<{
+    phase: 'validating' | 'fetching' | 'complete';
+    message: string;
+    hasInitialRates: boolean;
+  }>({
+    phase: 'complete',
+    message: '',
+    hasInitialRates: false
+  })
   const [shippingError, setShippingError] = useState<string | null>(null)
+  const [shippingProvider, setShippingProvider] = useState<{
+    provider: 'USPS' | 'TQL' | null;
+    expectedProvider: 'USPS' | 'TQL' | null;
+    totalQuantity: number;
+    fallbackUsed: boolean;
+  }>({
+    provider: null,
+    expectedProvider: null,
+    totalQuantity: 0,
+    fallbackUsed: false
+  })
+  const [showAllShippingOptions, setShowAllShippingOptions] = useState(false)
   const [addressValidation, setAddressValidation] = useState<{
     isValidating: boolean;
     isValid: boolean | null;
@@ -102,12 +125,24 @@ export default function CheckoutPage() {
     }
   }, []) // Remove dependencies to prevent loops - only check on mount
 
+  // Clear shipping rates when address changes
+  useEffect(() => {
+    // Reset shipping rates when address changes
+    setShippingRates([])
+    setShippingRatesLoaded(false)
+    setShowAllShippingOptions(false)
+    setLoadingAdditionalRates(false)
+  }, [formState.shippingAddress, formState.shippingCity, formState.shippingState, formState.shippingZip, formState.shippingCountry])
+
   // Validate address and fetch shipping rates when address changes
   useEffect(() => {
     const timer = setTimeout(() => {
       // First validate address, then fetch shipping rates
       validateAddress()
-      fetchShippingRates()
+      // Only fetch shipping rates if we haven't loaded them yet and not currently loading
+      if (!shippingRatesLoaded && !loadingShipping) {
+        fetchShippingRates()
+      }
     }, 1500) // Debounce API calls - longer delay for validation + shipping
 
     return () => clearTimeout(timer)
@@ -239,18 +274,46 @@ export default function CheckoutPage() {
     }
   }
 
-  // Fetch shipping rates from USPS
-  const fetchShippingRates = async () => {
+
+
+  // Convert rate data to ShippingOption format
+  const formatShippingRate = (rate: any): ShippingOption => ({
+    id: rate.id,
+    name: rate.displayName || `${rate.carrier} ${rate.service}`,
+    description: rate.estimatedDelivery || 'Standard delivery',
+    price: rate.rate,
+    estimatedDays: rate.estimatedDelivery || '',
+    carrier: rate.carrier,
+    service: rate.service,
+    delivery_date: rate.delivery_date,
+    delivery_date_guaranteed: rate.delivery_date_guaranteed
+  })
+
+  // Fetch shipping rates (with prevention of multiple calls)
+  const fetchShippingRates = async (forceRefresh = false) => {
     // Check if we have enough address info to fetch rates
     if (!formState.shippingAddress || !formState.shippingCity ||
         !formState.shippingState || !formState.shippingZip) {
       return
     }
 
+    // Prevent multiple calls unless forced refresh
+    if (shippingRatesLoaded && !forceRefresh) {
+      return
+    }
+
     setLoadingShipping(true)
     setShippingError(null)
+    setShippingRates([]) // Clear existing rates
+    setShippingRatesLoaded(false)
+    setShippingProgress({
+      phase: 'validating',
+      message: 'Validating address...',
+      hasInitialRates: false
+    })
 
     try {
+      // Get shipping rates
       const response = await fetch('/api/shipping/rates', {
         method: 'POST',
         headers: {
@@ -272,36 +335,80 @@ export default function CheckoutPage() {
       const data = await response.json()
 
       if (data.success && data.rates) {
-        // Convert USPS rates to our ShippingOption format
-        const formattedRates: ShippingOption[] = data.rates.map((rate: any) => ({
-          id: rate.id,
-          name: rate.displayName || `${rate.carrier} ${rate.service}`,
-          description: rate.estimatedDelivery || 'Standard delivery',
-          price: rate.rate,
-          estimatedDays: rate.estimatedDelivery || '',
-          carrier: rate.carrier,
-          service: rate.service,
-          delivery_date: rate.delivery_date,
-          delivery_date_guaranteed: rate.delivery_date_guaranteed
-        }))
+        setShippingProgress({
+          phase: 'complete',
+          message: '',
+          hasInitialRates: true
+        })
 
-        setShippingRates(formattedRates)
+        // Convert shipping rates to our ShippingOption format
+        const formattedRates: ShippingOption[] = data.rates.map(formatShippingRate)
+
+        // Sort rates by price (cheapest first)
+        const sortedRates = formattedRates.sort((a, b) => {
+          // If one is "Contact for Quote" (price = 0), put it at the end
+          if (a.price === 0 && b.price !== 0) return 1
+          if (b.price === 0 && a.price !== 0) return -1
+          if (a.price === 0 && b.price === 0) return 0
+
+          // Normal price sorting (cheapest first)
+          return a.price - b.price
+        })
+
+        // Set all rates immediately - pagination will be handled by display logic
+        setShippingRates(sortedRates)
+
+        // Progressive loading simulation: if more than 3 rates, show loading for additional rates
+        if (sortedRates.length > 3) {
+          setLoadingAdditionalRates(true)
+          // Simulate progressive loading effect
+          setTimeout(() => {
+            setLoadingAdditionalRates(false)
+          }, 800) // 800ms delay to show progressive loading effect
+        }
+
+        // Store provider information for display
+        setShippingProvider({
+          provider: data.provider,
+          expectedProvider: data.expectedProvider,
+          totalQuantity: data.totalQuantity,
+          fallbackUsed: data.fallbackUsed || false
+        })
 
         // Auto-select the first (cheapest) option if no option is selected
-        if (!formState.shippingOption && formattedRates.length > 0) {
+        if (!formState.shippingOption && sortedRates.length > 0) {
           setFormState(prev => ({
             ...prev,
-            shippingOption: formattedRates[0].id
+            shippingOption: sortedRates[0].id
           }))
         }
+
+        // Reset the show all options state when new rates are loaded
+        setShowAllShippingOptions(false)
+        // Mark shipping rates as loaded
+        setShippingRatesLoaded(true)
+        // Stop loading indicator - SUCCESS PATH FIX
+        setLoadingShipping(false)
       } else {
-        throw new Error(data.error || 'Failed to fetch USPS shipping rates')
+        throw new Error(data.error || 'Failed to fetch shipping rates')
       }
+
     } catch (error) {
-      console.error('Error fetching USPS shipping rates:', error)
+      console.error('Error fetching shipping rates:', error)
       setShippingRates([])
+      setShippingProvider({
+        provider: null,
+        expectedProvider: null,
+        totalQuantity: 0,
+        fallbackUsed: false
+      })
+      setShippingProgress({
+        phase: 'complete',
+        message: '',
+        hasInitialRates: false
+      })
       setShippingError(error instanceof Error ? error.message : 'Failed to get shipping rates. Please check your address and try again.')
-    } finally {
+      // Stop loading indicator - ERROR PATH (already present)
       setLoadingShipping(false)
     }
   }
@@ -316,13 +423,35 @@ export default function CheckoutPage() {
     return price.toFixed(2)
   }
 
+  // Calculate displayed shipping rates (top 3 by default, or all if expanded)
+  const displayedShippingRates = useMemo(() => {
+    if (shippingRates.length === 0) return []
+
+    // During progressive loading, we might have all rates loaded but want to show only top 3
+    // unless user has explicitly requested to see all options
+    return showAllShippingOptions ? shippingRates : shippingRates.slice(0, 3)
+  }, [shippingRates, showAllShippingOptions])
+
+
+
+  // Check if selected option is not in top 3 and auto-expand if needed
+  useEffect(() => {
+    if (formState.shippingOption && !showAllShippingOptions && shippingRates.length > 3) {
+      const top3Rates = shippingRates.slice(0, 3)
+      const selectedOptionInTop3 = top3Rates.some(rate => rate.id === formState.shippingOption)
+      if (!selectedOptionInTop3) {
+        setShowAllShippingOptions(true)
+      }
+    }
+  }, [formState.shippingOption, showAllShippingOptions, shippingRates])
+
   // Calculate order total using useMemo for performance and consistency
   const orderTotal = useMemo(() => {
-    // Get the selected shipping rate from USPS rates only
+    // Get the selected shipping rate
     const selectedShippingRate = shippingRates.find(rate => rate.id === formState.shippingOption)
     const shippingCost = selectedShippingRate ? selectedShippingRate.price : 0
 
-    // Use USPS shipping rate for calculation
+    // Use shipping rate for calculation
     return calculateOrderTotalWithRate(totalPrice, shippingCost, formState.shippingState || 'AZ')
   }, [totalPrice, formState.shippingOption, formState.shippingState, shippingRates])
 
@@ -572,7 +701,7 @@ export default function CheckoutPage() {
 
                 {addressValidation.isValid === true && (
                   <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                    <p className="text-sm text-green-800">✓ Address validated with USPS</p>
+                    <p className="text-sm text-green-800">✓ Address validated</p>
                   </div>
                 )}
 
@@ -700,12 +829,51 @@ export default function CheckoutPage() {
                   <Truck className="h-5 w-5 mr-2" />
                   Shipping Options
                 </CardTitle>
+                {shippingProvider.provider && (
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          shippingProvider.provider === 'USPS' ? 'bg-blue-500' : 'bg-green-500'
+                        }`}></div>
+                        <span className="font-medium">
+                          {shippingProvider.provider === 'USPS' ? 'USPS Shipping' : 'LTL Freight Shipping'}
+                        </span>
+                      </div>
+                      <span className="text-gray-600">
+                        {shippingProvider.totalQuantity.toLocaleString()} dowels
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {shippingProvider.provider === 'USPS'
+                        ? 'Standard parcel delivery for orders up to 5,000 dowels'
+                        : 'Professional freight delivery for bulk orders over 5,000 dowels'
+                      }
+                      {shippingProvider.fallbackUsed && (
+                        <span className="text-amber-600 ml-1">
+                          • Using fallback shipping method
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {loadingShipping && (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span>Loading shipping options...</span>
+                    <span>
+                      {shippingProgress.message || 'Loading shipping options...'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Show progress for freight shipping */}
+                {loadingShipping && shippingProgress.phase === 'fetching' && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      Getting freight quotes from multiple carriers... This may take a moment for the best rates.
+                    </p>
                   </div>
                 )}
 
@@ -715,14 +883,66 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {!loadingShipping && shippingRates.length > 0 && (
-                  <RadioGroup
-                    key="shipping-options"
-                    value={formState.shippingOption}
-                    onValueChange={(value) => handleSelectChange("shippingOption", value)}
-                    className="space-y-3"
-                  >
-                    {shippingRates.map((option: ShippingOption) => (
+                {/* Show shipping rates (even while loading additional ones) */}
+                {shippingRates.length > 0 && (
+                  <>
+                    {shippingProvider.provider && (
+                      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-700">
+                              <strong>
+                                {shippingRates.length} shipping option{shippingRates.length !== 1 ? 's' : ''} available
+                              </strong>
+                              {loadingAdditionalRates && (
+                                <span className="text-xs text-blue-600 ml-1">
+                                  (loading more options...)
+                                </span>
+                              )}
+                              {!loadingShipping && !showAllShippingOptions && shippingRates.length > 3 && (
+                                <span className="text-xs text-blue-600 ml-1">
+                                  (showing top 3 cheapest)
+                                </span>
+                              )}
+                              {!loadingShipping && !loadingAdditionalRates && shippingRatesLoaded && (
+                                <span className="text-xs text-green-600 ml-1">
+                                  ✓ All options loaded
+                                </span>
+                              )}
+                            </p>
+                            {shippingProvider.provider === 'TQL' && (
+                              <p className="text-xs text-gray-600 mt-1">
+                                Professional freight carriers for your bulk order. Rates include pickup and delivery to commercial addresses with loading docks.
+                              </p>
+                            )}
+                            {shippingProvider.provider === 'USPS' && (
+                              <p className="text-xs text-gray-600 mt-1">
+                                Standard USPS delivery options for your order.
+                              </p>
+                            )}
+                          </div>
+                          {shippingRatesLoaded && !loadingShipping && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => fetchShippingRates(true)}
+                              className="text-gray-600 hover:text-gray-800 text-xs"
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Refresh
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <RadioGroup
+                      key="shipping-options"
+                      value={formState.shippingOption}
+                      onValueChange={(value) => handleSelectChange("shippingOption", value)}
+                      className="space-y-3"
+                    >
+                    {displayedShippingRates.map((option: ShippingOption) => (
                       <div key={option.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
                         <RadioGroupItem value={option.id} id={option.id} />
                         <div className="flex-1">
@@ -731,7 +951,7 @@ export default function CheckoutPage() {
                               {option.name}
                             </Label>
                             <span className="font-medium">
-                              ${formatPrice(option.price)}
+                              {option.price === 0 ? 'Contact for Quote' : `$${formatPrice(option.price)}`}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
@@ -742,10 +962,55 @@ export default function CheckoutPage() {
                               via {option.carrier} {option.service && `- ${option.service}`}
                             </p>
                           )}
+                          {option.price === 0 && (
+                            <p className="text-xs text-amber-600 mt-1 font-medium">
+                              📞 Call (480) 581-7145 for freight shipping quote
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}
                   </RadioGroup>
+
+                  {/* Show "Other Options" button if there are more than 3 options and not loading */}
+                  {shippingRates.length > 3 && !loadingShipping && (
+                    <div className="mt-4 text-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllShippingOptions(!showAllShippingOptions)}
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        {showAllShippingOptions ? (
+                          <>
+                            Show Top 3 Options
+                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </>
+                        ) : (
+                          <>
+                            Show All {shippingRates.length} Options
+                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Show loading indicator for additional rates during progressive loading */}
+                  {loadingAdditionalRates && (
+                    <div className="mt-4 text-center">
+                      <div className="flex items-center justify-center text-sm text-gray-600">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading additional shipping options...
+                      </div>
+                    </div>
+                  )}
+                  </>
                 )}
 
                 {!loadingShipping && shippingRates.length === 0 && !shippingError && (
@@ -784,12 +1049,17 @@ export default function CheckoutPage() {
                 <Button
                   type="submit"
                   className="w-full bg-amber-600 hover:bg-amber-700"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (shippingRates.find(rate => rate.id === formState.shippingOption)?.price === 0)}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Creating checkout session...
+                    </>
+                  ) : shippingRates.find(rate => rate.id === formState.shippingOption)?.price === 0 ? (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Contact for Freight Quote - (480) 581-7145
                     </>
                   ) : (
                     <>
@@ -821,6 +1091,24 @@ export default function CheckoutPage() {
                     <p className="font-medium">${formatPrice((item?.quantity || 0) * (item?.pricePerUnit || 0))}</p>
                   </div>
                 ))}
+
+                {/* Shipping Method Info */}
+                {shippingProvider.provider && (
+                  <div className="pt-2 pb-2 border-b">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Shipping Method:</span>
+                      <span className="font-medium">
+                        {shippingProvider.provider === 'USPS' ? 'USPS Parcel' : 'LTL Freight'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {shippingProvider.provider === 'USPS'
+                        ? 'Standard delivery for orders up to 5,000 dowels'
+                        : 'Professional freight delivery for bulk orders'
+                      }
+                    </p>
+                  </div>
+                )}
 
                 {/* Order Calculations */}
                 <div className="space-y-2 pt-4 border-t">

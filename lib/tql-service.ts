@@ -7,20 +7,20 @@ export interface TQLQuoteRequest {
   origin: TQLAddress;
   destination: TQLAddress;
   quoteCommodities: TQLItem[];
-  shipmentDate: string;
+  shipmentDate?: string;
   pickLocationType?: string;
   dropLocationType?: string;
   accessorials?: string[];
 }
 
 export interface TQLAddress {
-  name: string;
-  streetAddress: string;
   city: string;
   state: string;
   postalCode: string;
   country: string;
-  // Optional B2B fields
+  // Optional fields for detailed addresses
+  name?: string;
+  streetAddress?: string;
   contactName?: string;
   contactPhone?: string;
   hoursOpen?: string;
@@ -42,21 +42,34 @@ export interface TQLItem {
 }
 
 export interface TQLQuoteResponse {
-  success: boolean;
   content: {
-    quoteId: string;
-    rates: TQLRate[];
+    quoteId: number;
+    carrierPrices: TQLRate[];
+    quoteCommodities: any[];
+    createdDate: string;
+    shipmentDate: string;
+    expirationDate: string;
   };
+  statusCode: number;
+  informationalMessage: string;
 }
 
 export interface TQLRate {
-  carrierId: string;
-  carrierName: string;
+  id: number;
+  carrier: string;
+  scac: string;
+  customerRate: number;
+  carrierQuoteId?: string;
+  serviceLevel: string;
   serviceType: string;
-  totalCost: number;
   transitDays: number;
-  estimatedDeliveryDate?: string;
-  accessorials?: any[];
+  maxLiabilityNew: number;
+  maxLiabilityUsed: number;
+  serviceLevelDescription: string;
+  priceCharges: any[];
+  isPreferred: boolean;
+  isCarrierOfTheYear: boolean;
+  isEconomy: boolean;
 }
 
 export class TQLService {
@@ -78,6 +91,9 @@ export class TQLService {
     // Use production endpoint (staging has same postal code issues)
     const endpoint = `${this.baseUrl}/ltl/quotes`;
 
+    // Log basic request info for monitoring
+    console.log(`🔍 TQL Quote Request: ${quoteData.origin.city}, ${quoteData.origin.state} → ${quoteData.destination.city}, ${quoteData.destination.state}`);
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -90,10 +106,13 @@ export class TQLService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      console.log('❌ TQL Error response:', JSON.stringify(error, null, 2));
       throw new Error(`TQL quote creation failed: ${response.status} - ${JSON.stringify(error)}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log(`✅ TQL Success: Found ${result.content.carrierPrices?.length || 0} shipping options`);
+    return result;
   }
 
   /**
@@ -127,13 +146,13 @@ export function transformCartToTQLQuote(
   cartItems: CartItem[],
   origin: TQLAddress,
   destination: TQLAddress,
-  shipmentDate: string = new Date().toISOString()
+  shipmentDate?: string
 ): TQLQuoteRequest {
   const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  
+
   // Get tier data for packaging (reuse from USPS logic)
   const tier = getTierForQuantity(totalQuantity);
-  
+
   // For Force Dowels, all orders >5K are palletized
   const tqlItems: TQLItem[] = [{
     description: `Force Dowels - ${totalQuantity.toLocaleString()} units (${tier.tierName})`,
@@ -150,7 +169,7 @@ export function transformCartToTQLQuote(
   }];
 
   // B2B freight - customers have loading docks, no special accessorials needed
-  const accessorials = [];
+  const accessorials: string[] = [];
 
   // For B2B with loading docks, we typically don't need:
   // - Liftgate delivery (they have docks)
@@ -161,11 +180,24 @@ export function transformCartToTQLQuote(
   // accessorials.push('APPOINTMENT_DELIVERY'); // If customer requires scheduling
   // accessorials.push('NOTIFY_BEFORE_DELIVERY'); // If customer wants notification
 
+  // Format shipment date if provided, otherwise let TQL use default
+  const formattedShipmentDate = shipmentDate || new Date().toISOString();
+
   return {
-    origin,
-    destination,
+    origin: {
+      city: origin.city,
+      state: origin.state,
+      postalCode: origin.postalCode,
+      country: origin.country || 'USA'
+    },
+    destination: {
+      city: destination.city,
+      state: destination.state,
+      postalCode: destination.postalCode,
+      country: destination.country || 'USA'
+    },
     quoteCommodities: tqlItems,
-    shipmentDate,
+    shipmentDate: formattedShipmentDate,
     pickLocationType: 'Commercial', // Force Dowel Company warehouse
     dropLocationType: 'Commercial', // B2B customers with loading docks
     accessorials // Minimal accessorials for B2B dock-to-dock delivery
