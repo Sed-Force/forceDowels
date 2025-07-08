@@ -1,8 +1,24 @@
-# Quick Start Guide
+# Getting Started with Force Dowels
 
-Get Force Dowels up and running in under 5 minutes!
+Get Force Dowels up and running quickly! This guide covers everything from initial setup to development workflow.
 
-## 🚀 Express Setup
+## 📋 Prerequisites
+
+### System Requirements
+- **Node.js 18+** - [Download from nodejs.org](https://nodejs.org/)
+- **npm or yarn** - Package manager (npm comes with Node.js)
+- **Git** - Version control system
+- **Code Editor** - VS Code recommended with TypeScript extensions
+
+### Required Accounts & API Keys
+You'll need accounts and API keys from these services:
+
+1. **Clerk** (Authentication) - [clerk.com](https://clerk.com)
+2. **Stripe** (Payments) - [stripe.com](https://stripe.com)
+3. **Resend** (Email) - [resend.com](https://resend.com)
+4. **Neon** (Database) - [neon.tech](https://neon.tech) (recommended)
+
+## 🚀 Quick Setup (5 Minutes)
 
 ### 1. Clone & Install
 ```bash
@@ -18,36 +34,78 @@ cp .env.example .env.local
 
 **Minimum required variables for development:**
 ```env
-# For basic functionality
+# Application Configuration
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 
-# Add your API keys (get from respective dashboards)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key
-CLERK_SECRET_KEY=your_clerk_secret
-STRIPE_PUBLISHABLE_KEY=your_stripe_key
-STRIPE_SECRET_KEY=your_stripe_secret
-RESEND_API_KEY=your_resend_key
+# Database (get from Neon dashboard)
+DATABASE_URL=postgresql://username:password@host/database
+
+# Clerk Authentication (get from Clerk dashboard)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_key
+CLERK_SECRET_KEY=sk_test_your_clerk_secret
+
+# Stripe Payments (get from Stripe dashboard - TEST MODE)
+STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Email Service (get from Resend dashboard)
+RESEND_API_KEY=re_your_resend_key
 ```
 
-### 3. Start Development
+### 3. Initialize Database
+```bash
+npm run db:init
+```
+
+### 4. Start Development
 ```bash
 npm run dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000) 🎉
 
-## 🔧 Development Mode Features
+## 🔧 Development Features
 
-### Test Accounts
+### Test Data
 - **Stripe Test Cards**: Use `4242 4242 4242 4242` for testing payments
 - **Clerk Auth**: Create test accounts directly in the app
+- **Database**: Automatically initialized with required tables
 
 ### Available Routes
 - `/` - Homepage with product showcase
 - `/order` - Product ordering (requires auth)
+- `/checkout` - Checkout process with Stripe integration
 - `/videos` - Product demonstration videos
 - `/distributor-application` - Become a distributor
 - `/contact` - Contact form
+- `/admin/database` - Database management (development only)
+
+## 📚 Detailed Service Setup
+
+### Clerk Authentication Setup
+1. Go to [clerk.com](https://clerk.com) and create an account
+2. Create a new application
+3. Copy your keys from the API Keys section
+4. Configure sign-in/sign-up pages in your Clerk dashboard
+
+### Stripe Payment Setup
+1. Go to [stripe.com](https://stripe.com) and create an account
+2. **Switch to Test Mode** (toggle in left sidebar)
+3. Go to **Developers → API Keys**
+4. Copy your test keys (pk_test_... and sk_test_...)
+5. Set up webhooks pointing to your local development server
+
+### Resend Email Setup
+1. Go to [resend.com](https://resend.com) and create an account
+2. Generate an API key
+3. Verify your domain (optional for development)
+
+### Database Setup (Neon)
+1. Go to [neon.tech](https://neon.tech) and create an account
+2. Create a new project
+3. Copy the connection string from your dashboard
+4. The database will be automatically initialized when you run `npm run db:init`
 - `/sign-in` - User authentication
 - `/checkout` - Payment processing
 

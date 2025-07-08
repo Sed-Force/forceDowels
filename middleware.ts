@@ -17,6 +17,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/distributor-application',
   '/api/distributors',
   '/api/stripe/webhooks',
+  '/api/shipping/rates',
   '/api/admin/init-database',
   '/api/admin/cleanup-orders',
   '/api/admin/reset-orders',
