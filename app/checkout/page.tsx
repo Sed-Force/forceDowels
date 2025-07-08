@@ -1026,25 +1026,36 @@ export default function CheckoutPage() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                       <RadioGroup
-                        key={`shipping-options-${showAllShippingOptions ? 'all' : 'top3'}-${displayedShippingRates.length}`}
                         value={formState.shippingOption}
                         onValueChange={(value) => handleSelectChange("shippingOption", value)}
                         className="space-y-4"
                       >
-                        {displayedShippingRates.map((option: ShippingOption, index) => {
-                          // Only animate the newly visible items (beyond index 2) when expanding
-                          const shouldAnimate = showAllShippingOptions && index > 2
+                        <AnimatePresence mode="popLayout">
+                          {displayedShippingRates.map((option: ShippingOption, index) => {
+                            // Only animate the newly visible items (beyond index 2) when expanding
+                            const shouldAnimateIn = showAllShippingOptions && index > 2
 
-                          return (
-                            <motion.div
-                              key={`${option.id}-${showAllShippingOptions ? 'all' : 'top3'}`}
-                              initial={shouldAnimate ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{
-                                duration: shouldAnimate ? 0.2 : 0,
-                                delay: shouldAnimate ? (index - 3) * 0.05 : 0, // Shorter delay, only for items beyond top 3
-                                ease: "easeOut"
-                              }}
+                            return (
+                              <motion.div
+                                key={option.id}
+                                layout
+                                initial={shouldAnimateIn ? { opacity: 0, y: 10, scale: 0.95 } : { opacity: 1, y: 0, scale: 1 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{
+                                  opacity: 0,
+                                  y: -10,
+                                  scale: 0.95,
+                                  transition: {
+                                    duration: 0.15,
+                                    delay: index > 2 ? (displayedShippingRates.length - index) * 0.02 : 0, // Reverse order for exit
+                                    ease: "easeIn"
+                                  }
+                                }}
+                                transition={{
+                                  duration: 0.2,
+                                  delay: shouldAnimateIn ? (index - 3) * 0.03 : 0,
+                                  ease: "easeOut"
+                                }}
                             className={`relative group cursor-pointer transition-all duration-200 ${
                               formState.shippingOption === option.id
                                 ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg'
@@ -1152,6 +1163,7 @@ export default function CheckoutPage() {
                           </motion.div>
                           )
                         })}
+                        </AnimatePresence>
                       </RadioGroup>
                     </motion.div>
 
