@@ -31,25 +31,26 @@ export interface USPSPackageDimensions {
 }
 
 // Tier data for Force Dowels packaging and shipping
+// Updated with corrected packaging specifications
 export const TIER_DATA = [
-  { tierName: "Bag",                   maxQty: 5_000,     pkgCount: 1,
-    pkgType: "BAG",    weightLbs:  18.6, dimsIn: [18, 12,  8] },   // 1 bag
+  { tierName: "Small Box",             maxQty: 5_000,     pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  18.6, dimsIn: [15, 15, 10] },   // 1 small box
   { tierName: "Box",                   maxQty: 20_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  77,   dimsIn: [16, 12, 12] },   // 1 box
+    pkgType: "BOX",    weightLbs:  77,   dimsIn: [20, 20, 12] },   // 1 box
   { tierName: "Pallet-4-box",          maxQty: 80_000,    pkgCount: 1,
-    pkgType: "PALLET", weightLbs: 458,   dimsIn: [48, 40, 40] },   // 1 pallet / 4 boxes
+    pkgType: "PALLET", weightLbs: 458,   dimsIn: [40, 48,  6] },   // 1 pallet / 4 boxes
   { tierName: "Pallet-8-box",          maxQty:160_000,    pkgCount: 1,
-    pkgType: "PALLET", weightLbs: 766,   dimsIn: [48, 40, 60] },   // 8 boxes
+    pkgType: "PALLET", weightLbs: 766,   dimsIn: [40, 48, 12] },   // 1 pallet / 8 boxes
   { tierName: "Pallet-12-box",         maxQty:240_000,    pkgCount: 1,
-    pkgType: "PALLET", weightLbs:1_074,  dimsIn: [48, 40, 72] },   // 12 boxes
+    pkgType: "PALLET", weightLbs:1_074,  dimsIn: [40, 48, 18] },   // 1 pallet / 12 boxes
   { tierName: "Pallet-16-box",         maxQty:320_000,    pkgCount: 1,
-    pkgType: "PALLET", weightLbs:1_382,  dimsIn: [48, 40, 80] },   // 16 boxes
+    pkgType: "PALLET", weightLbs:1_382,  dimsIn: [40, 48, 24] },   // 1 pallet / 16 boxes
   { tierName: "Pallet-20-box",         maxQty:400_000,    pkgCount: 1,
-    pkgType: "PALLET", weightLbs:1_690,  dimsIn: [48, 40, 84] },   // 20 boxes
+    pkgType: "PALLET", weightLbs:1_690,  dimsIn: [40, 48, 30] },   // 1 pallet / 20 boxes
   { tierName: "Pallet-24-box",         maxQty:480_000,    pkgCount: 1,
-    pkgType: "PALLET", weightLbs:1_998,  dimsIn: [48, 40, 90] },   // 24 boxes
+    pkgType: "PALLET", weightLbs:1_998,  dimsIn: [40, 48, 36] },   // 1 pallet / 24 boxes
   { tierName: "Two-Pallet (48 boxes)", maxQty:960_000,    pkgCount: 2,
-    pkgType: "PALLET", weightLbs:4_000,  dimsIn: [48, 40, 90] }    // 4 000 lb TOTAL (~2 000 lb total)
+    pkgType: "PALLET", weightLbs:2_000,  dimsIn: [40, 48, 36] }    // 2 pallets, 2,000 lbs each (4,000 lbs total)
 ];
 
 // Your business address (from address for shipping calculations)

@@ -107,20 +107,24 @@ export class UnifiedShippingService {
           }];
         }
 
-        if (tier.weightLbs > 70) {
-          console.error(`❌ Package too heavy for USPS fallback: ${tier.weightLbs} lbs (USPS limit: 70 lbs)`);
-          console.error(`💡 Orders >5K dowels require LTL freight shipping via TQL`);
-          throw new Error(`Large orders of ${totalQuantity.toLocaleString()} dowels require LTL freight shipping. Our freight shipping service is temporarily unavailable for your location. Please contact us at (480) 581-7145 or info@forcedowels.com for assistance with freight shipping quotes.`);
-        }
+        // For all TQL failures on orders >5K, recommend manual calculation
+        console.error(`❌ TQL freight shipping failed for ${totalQuantity} dowels (${tier.weightLbs} lbs)`);
+        console.error(`💡 Orders >5K dowels require LTL freight shipping - manual quote needed`);
 
-        console.log(`🔄 Falling back to USPS for ${totalQuantity} dowels (${tier.weightLbs} lbs)...`);
-        const uspsRates = await this.getUSPSRates(toAddress, cartItems);
-        // Mark these rates as fallback rates
-        return uspsRates.map(rate => ({
-          ...rate,
-          displayName: `${rate.displayName} (via USPS fallback)`,
-          estimatedDelivery: `${rate.estimatedDelivery} - Note: Large order using USPS fallback`
-        }));
+        // Return a manual quote option for all TQL failures
+        return [{
+          id: 'manual_freight_quote',
+          service: 'Manual Quote Required',
+          carrier: 'LTL Freight',
+          rate: 0, // Will be quoted manually
+          currency: 'USD',
+          delivery_days: 5,
+          delivery_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          delivery_date_guaranteed: false,
+          provider: 'TQL' as const,
+          displayName: 'LTL Freight - Manual Quote Required',
+          estimatedDelivery: 'Contact for freight quote: (480) 581-7145'
+        }];
       }
     }
   }
