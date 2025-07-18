@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -10,55 +10,59 @@ import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 interface VideoItem {
   id: number;
   title: string;
-  videoUrl: string;
+  youtubeId: string;
+  youtubeUrl: string;
 }
+
+
 
 const videoData: VideoItem[] = [
   {
     id: 1,
-    title: "Drawer Base Cabinet Assembly",
-    videoUrl: "/videos/1.mp4"
+    title: "540lb Structural Load Test",
+    youtubeUrl: "https://youtu.be/bQ3HrRR9ERU?si=1E359MoO2DSqZTbm",
+    youtubeId: "bQ3HrRR9ERU"
   },
   {
     id: 2,
-    title: "Base Cabinet Assembly",
-    videoUrl: "/videos/2.mp4"
+    title: "Drill and Dowel Machine",
+    youtubeUrl: "https://youtu.be/2yGzh8P3YB8?si=cbaI4IcPbglzSEtm",
+    youtubeId: "2yGzh8P3YB8"
   },
   {
     id: 3,
-    title: "Sink Base Cabinet Assembly",
-    videoUrl: "/videos/3.mp4"
+    title: "Sideways Endurance Test- Over 330 lbs - 9 days",
+    youtubeUrl: "https://youtu.be/OfQiub4Szm4?si=v2amaLXhlN9sMBFY",
+    youtubeId: "OfQiub4Szm4"
   },
   {
     id: 4,
-    title: "Side-Mounted Load Test",
-    videoUrl: "/videos/4.mp4"
+    title: "Sink Base Cabinet Assembly Video",
+    youtubeUrl: "https://youtu.be/VgTYhwdQtBk?si=pFxL62bQaHWTuY-g",
+    youtubeId: "VgTYhwdQtBk"
   },
   {
     id: 5,
-    title: "Standard Load Test",
-    videoUrl: "/videos/5.mp4"
+    title: "Base Cabinet Assembly Video",
+    youtubeUrl: "https://youtu.be/2JwbYhqQLgo?si=5pR2LT_6JQxtjoUk",
+    youtubeId: "2JwbYhqQLgo"
   },
   {
     id: 6,
-    title: "How to Build Your Pencil Holder",
-    videoUrl: "/videos/6.mp4"
+    title: "Upper Cabinet Assembly Video",
+    youtubeUrl: "https://youtu.be/Y7wXrM5CKj8?si=pW-LkSDLORzXfxtS",
+    youtubeId: "Y7wXrM5CKj8"
   },
   {
     id: 7,
-    title: "Drill and Dowel Machine",
-    videoUrl: "/videos/7.mp4"
+    title: "Drawer Base Cabinet Assembly Video",
+    youtubeUrl: "https://youtu.be/FMUZqFzqhos?si=EfN55O2nvBjXmg9o",
+    youtubeId: "FMUZqFzqhos"
   },
 ];
 
 const VideoGallery = () => {
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
-  // Create refs for the video elements
-  const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
-
-  const setVideoRef = (id: number) => (el: HTMLVideoElement | null) => {
-    videoRefs.current[id] = el;
-  };
 
   const openVideoModal = (video: VideoItem) => {
     setSelectedVideo(video);
@@ -123,18 +127,11 @@ const VideoGallery = () => {
                 className="overflow-hidden hover:border-amber-400 transition-colors duration-300 flex flex-col [&>div]:p-1 [&>div>div:last-child]:p-2"
                 header={
                   <div className="relative aspect-[16/9] bg-muted overflow-hidden rounded-lg shadow-md mx-auto w-full p-[1px]">
-                    <video
-                      ref={setVideoRef(video.id)}
-                      src={video.videoUrl}
+                    <img
+                      src={`https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
+                      alt={video.title}
                       className="w-full h-full object-cover object-center"
                       style={{ objectFit: 'cover', objectPosition: 'center' }}
-                      muted
-                      playsInline
-                      preload="metadata"
-                      onLoadedMetadata={e => {
-                        // Try to find a better frame for the thumbnail (1 second in)
-                        e.currentTarget.currentTime = 1.0;
-                      }}
                     />
                     <div
                       className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 flex items-center justify-center cursor-pointer transition-all hover:bg-black/30"
@@ -186,15 +183,14 @@ const VideoGallery = () => {
             </Button>
 
             <div className="aspect-video bg-black w-full">
-              {/* Video player */}
-              <video
-                src={selectedVideo.videoUrl}
-                controls
-                autoPlay
-                className="w-full h-full object-contain"
-              >
-                Your browser does not support the video tag.
-              </video>
+              {/* YouTube iframe embed */}
+              <iframe
+                src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0`}
+                title={selectedVideo.title}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
             </div>
           </motion.div>
         </div>
