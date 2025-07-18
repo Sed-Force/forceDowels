@@ -1,25 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
 import { UnifiedShippingService, UnifiedShippingAddress } from '@/lib/shipping-service';
 import { CartItem } from '@/contexts/cart-context';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚚 Shipping API: Checking authentication...');
-
-    // Verify user authentication
-    const user = await currentUser();
-    console.log('🚚 Shipping API: currentUser():', user ? 'found' : 'not found');
-
-    if (!user) {
-      console.error('❌ Shipping API: currentUser() returned null');
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    console.log('✅ Shipping API: User authenticated successfully with userId:', user.id);
+    console.log('🚚 Shipping API: Request received');
 
     const body = await request.json();
     const { shippingAddress, cartItems } = body;
