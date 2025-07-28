@@ -25,7 +25,7 @@ export default function OrderPage() {
   const { toast } = useToast()
   const user = useUser()
   const router = useRouter()
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
 
   // Use the pricing tiers from the pricing utility
   const tiers = PRICING_TIERS
@@ -110,6 +110,19 @@ export default function OrderPage() {
       }
 
       if (isKit) {
+        // Check if kit already exists in cart
+        const existingKit = items.find((i) => i.name === "Force Dowels Kit")
+        
+        if (existingKit) {
+          toast({
+            title: "Kit already in cart",
+            description: "You can only have one Force Dowels Kit per order.",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+        
         // Add Force Dowels Kit to cart
         addItem({
           id: "force-dowels-kit", // Use consistent ID for Force Dowels Kit

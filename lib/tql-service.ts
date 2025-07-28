@@ -1,7 +1,7 @@
 // TQL API Service for LTL shipping quotes
 import { getTQLToken } from './tql-auth';
 import { CartItem } from '@/contexts/cart-context';
-import { getTierForQuantity } from './usps';
+import { getTierForQuantity } from './ups';
 
 export interface TQLQuoteRequest {
   origin: TQLAddress;

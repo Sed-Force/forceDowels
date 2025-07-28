@@ -1,58 +1,55 @@
-# USPS API Integration Setup Guide
+# UPS API Integration Setup Guide
 
-This guide explains how to set up the USPS API integration for shipping rate calculations in the Force Dowels application.
+This guide explains how to set up the UPS API integration for shipping rate calculations in the Force Dowels application.
 
 ## Overview
 
-The application has been updated to use the USPS Domestic Prices 3.0 API directly instead of EasyPost. This provides:
+The application has been updated to use the UPS Rating API directly instead of USPS. This provides:
 
-- **Direct integration** with USPS (no middleman)
-- **Official USPS rates** and delivery times
-- **Lower costs** (no EasyPost fees)
+- **Direct integration** with UPS (no middleman)
+- **Official UPS rates** and delivery times
 - **Better control** over shipping options
-- **Access to all USPS services**
+- **Access to all UPS services**
+- **More reliable service** for business shipping
 
 ## Prerequisites
 
-1. **USPS Business Account**: You need a USPS business account with:
-   - Customer Registration ID (CRID)
-   - Mailer ID (MID)
-
-2. **USPS Developer Account**: Register at [developer.usps.com](https://developer.usps.com)
+1. **UPS Account**: You need a UPS business account
+2. **UPS Developer Account**: Register at [developer.ups.com](https://developer.ups.com)
 
 ## Step-by-Step Setup
 
-### 1. Register for USPS Developer Account
+### 1. Register for UPS Developer Account
 
-1. Go to [https://developer.usps.com](https://developer.usps.com)
-2. Click "Sign Up / Login"
+1. Go to [https://developer.ups.com](https://developer.ups.com)
+2. Click "Get Started" or "Sign Up"
 3. Create a new developer account
 4. Verify your email address
 
 ### 2. Create an Application
 
-1. Log into the USPS Developer Portal
-2. Navigate to "Getting Started" → "Add App"
+1. Log into the UPS Developer Portal
+2. Navigate to "My Apps" → "Create App"
 3. Fill out the application form:
    - **App Name**: Force Dowels Shipping
    - **Description**: Shipping rate calculation for Force Dowels e-commerce
-   - **APIs**: Select "Domestic Prices"
-   - **Environment**: Start with "Test" for development
+   - **APIs**: Select "Rating API"
+   - **Environment**: Start with "Production" (UPS uses production for live rates)
 
 ### 3. Get API Credentials
 
 After creating your app, you'll receive:
-- **Client ID** (Consumer Key)
-- **Client Secret** (Consumer Secret)
+- **Client ID**
+- **Client Secret**
 
 ### 4. Update Environment Variables
 
 Add these to your `.env.local` file:
 
 ```env
-# USPS API Credentials
-USPS_CLIENT_ID=your_client_id_here
-USPS_CLIENT_SECRET=your_client_secret_here
+# UPS API Credentials
+UPS_CLIENT_ID=your_client_id_here
+UPS_CLIENT_SECRET=your_client_secret_here
 ```
 
 ### 5. Test the Integration
@@ -60,7 +57,7 @@ USPS_CLIENT_SECRET=your_client_secret_here
 1. Start your development server: `npm run dev`
 2. Go to the checkout page
 3. Enter a complete shipping address
-4. Verify that USPS shipping options appear
+4. Verify that UPS shipping options appear
 
 ## API Endpoints Used
 

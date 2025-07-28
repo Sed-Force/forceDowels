@@ -25,7 +25,7 @@ export function PricingComponent() {
   const user = useUser()
   const router = useRouter()
   const { toast } = useToast()
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
 
   // Refs for GSAP animations
   const headerRef = useRef(null)
@@ -201,6 +201,18 @@ export function PricingComponent() {
         variant: "destructive",
       })
       router.push("/handler/sign-in?redirect=/pricing")
+      return
+    }
+
+    // Check if kit already exists in cart
+    const existingKit = items.find((i) => i.name === "Force Dowels Kit")
+    
+    if (existingKit) {
+      toast({
+        title: "Kit already in cart",
+        description: "You can only have one Force Dowels Kit per order.",
+        variant: "destructive",
+      })
       return
     }
 

@@ -88,6 +88,30 @@ The application sends emails for:
 
 Default sender: `Force Dowels <onboarding@resend.dev>`
 
+## 📦 Shipping Services
+
+### UPS API (Required)
+```env
+UPS_CLIENT_ID=your_ups_client_id
+UPS_CLIENT_SECRET=your_ups_client_secret
+```
+
+### Setup Instructions
+1. Create account at [developer.ups.com](https://developer.ups.com)
+2. Create a new application
+3. Select "Rating API"
+4. Get Client ID and Client Secret
+
+### TQL Freight (Optional - for large orders)
+```env
+NEXT_PUBLIC_TQL_SUBSCRIPTION_KEY=your_subscription_key
+TQL_CLIENT_ID=your_client_id
+TQL_CLIENT_SECRET=your_client_secret
+TQL_USERNAME=your_username
+TQL_PASSWORD=your_password
+TQL_BASE_URL=https://public.api.tql.com
+```
+
 ## 🌐 Application Configuration
 
 ### Basic Configuration
@@ -125,6 +149,18 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 
 # Email Service (Resend)
 RESEND_API_KEY=re_your_resend_api_key
+
+# UPS Shipping API
+UPS_CLIENT_ID=your_ups_client_id
+UPS_CLIENT_SECRET=your_ups_client_secret
+
+# TQL Freight API (Optional - for large orders)
+NEXT_PUBLIC_TQL_SUBSCRIPTION_KEY=your_tql_subscription_key
+TQL_CLIENT_ID=your_tql_client_id
+TQL_CLIENT_SECRET=your_tql_client_secret
+TQL_USERNAME=your_tql_username
+TQL_PASSWORD=your_tql_password
+TQL_BASE_URL=https://public.api.tql.com
 
 # ==============================================
 # PRODUCTION OVERRIDES (uncomment for production)
