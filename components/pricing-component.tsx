@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
+import { useCart } from "@/contexts/cart-context"
 
 export function PricingComponent() {
   const [quantity, setQuantity] = useState<number>(5000)
@@ -24,6 +25,7 @@ export function PricingComponent() {
   const user = useUser()
   const router = useRouter()
   const { toast } = useToast()
+  const { addItem } = useCart()
 
   // Refs for GSAP animations
   const headerRef = useRef(null)
@@ -173,10 +175,46 @@ export function PricingComponent() {
       return
     }
 
-    // In a real app, you would add the item to the cart
+    const tier = tiers.find((t) => t.id === selectedTier) || tiers[0]
+    const pricePerUnit = Number.parseFloat(tier.pricePerUnit.replace("$", ""))
+    
+    addItem({
+      id: `force-dowels-${Date.now()}`,
+      name: "Force Dowels",
+      quantity: quantity,
+      tier: tier.range,
+      pricePerUnit: pricePerUnit,
+    })
+    
     toast({
       title: "Added to cart",
       description: `${formatNumber(quantity)} units of Force Dowels added to your cart.`,
+    })
+  }
+
+  // Handle add Force Dowels Kit to cart
+  const handleAddKitToCart = () => {
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login or create an account to make a purchase.",
+        variant: "destructive",
+      })
+      router.push("/handler/sign-in?redirect=/pricing")
+      return
+    }
+
+    addItem({
+      id: `force-dowels-kit-${Date.now()}`,
+      name: "Force Dowels Kit",
+      quantity: 300,
+      tier: "Kit - 300 units",
+      pricePerUnit: 0.12,
+    })
+    
+    toast({
+      title: "Added to cart",
+      description: "Force Dowels Kit (300 units) added to your cart.",
     })
   }
 
@@ -414,6 +452,61 @@ export function PricingComponent() {
           </Tabs>
         </div>
       </div>
+      )}
+
+      {/* Force Dowels Kit Section */}
+      {user && (
+        <div className="mt-12 text-center">
+          <motion.h2
+            className="text-2xl font-semibold mb-6 text-foreground"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Force Dowels Kit
+          </motion.h2>
+          <motion.div
+            className="max-w-md mx-auto"
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover="hover"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Starter Kit</CardTitle>
+                <CardDescription>Perfect for small projects and testing</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-primary">$36</div>
+                    <div className="text-sm text-muted-foreground mt-1">300 dowels</div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Price per dowel:</span>
+                    <span className="font-medium">$0.12</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Weight category:</span>
+                    <span className="font-medium">Same as 5K dowels</span>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <motion.div className="w-full" variants={buttonVariants} whileHover="hover" whileTap="tap">
+                  <Button 
+                    className="w-full bg-amber-600 hover:bg-amber-700" 
+                    size="lg"
+                    onClick={handleAddKitToCart}
+                  >
+                    Add Kit to Cart
+                  </Button>
+                </motion.div>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </div>
       )}
 
       <div className="mt-12 text-center" ref={customQuoteRef}>

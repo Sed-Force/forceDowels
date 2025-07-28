@@ -15,11 +15,13 @@ import { useCart } from "@/contexts/cart-context"
 import { PRICING_TIERS, getTierInfo, formatNumber as formatNum, formatCurrency, formatExactPrice, isValidQuantityIncrement, roundToValidQuantity } from "@/lib/pricing"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CardDescription, CardFooter } from "@/components/ui/card"
 
 export default function OrderPage() {
   const [quantity, setQuantity] = useState<number>(5000)
   const [selectedTier, setSelectedTier] = useState<string>("5,000-20,000")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isKit, setIsKit] = useState(false)
   const { toast } = useToast()
   const user = useUser()
   const router = useRouter()
@@ -31,6 +33,16 @@ export default function OrderPage() {
   // Handle quantity change
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number.parseInt(e.target.value.replace(/,/g, ""), 10) || 0
+    
+    // Check if it's the kit quantity
+    if (value === 300) {
+      setQuantity(300)
+      setIsKit(true)
+      setSelectedTier("Kit - 300 units")
+      return
+    }
+    
+    setIsKit(false)
     const newQuantity = roundToValidQuantity(value) // Round to valid 5,000-unit increment
     setQuantity(newQuantity)
 
@@ -43,6 +55,8 @@ export default function OrderPage() {
 
   // Handle quantity increment
   const handleQuantityIncrement = () => {
+    if (isKit) return // Can't increment kit quantity
+    
     const newQuantity = Math.min(960000, quantity + 5000)
     setQuantity(newQuantity)
 
@@ -54,6 +68,8 @@ export default function OrderPage() {
 
   // Handle quantity decrement
   const handleQuantityDecrement = () => {
+    if (isKit) return // Can't decrement kit quantity
+    
     const newQuantity = Math.max(5000, quantity - 5000)
     setQuantity(newQuantity)
 
@@ -82,8 +98,8 @@ export default function OrderPage() {
 
       setIsSubmitting(true)
 
-      // Validate quantity increment
-      if (!isValidQuantityIncrement(quantity)) {
+      // Validate quantity increment (skip for kit)
+      if (!isKit && !isValidQuantityIncrement(quantity)) {
         toast({
           title: "Invalid quantity",
           description: "Quantity must be in 5,000-unit increments (minimum 5,000 units; maximum 960,000 units).",
@@ -93,36 +109,50 @@ export default function OrderPage() {
         return
       }
 
-      // Get the proper pricing based on quantity
-      const tierInfo = getTierInfo(quantity)
-      if (!tierInfo.pricePerUnit) {
-        toast({
-          title: "Invalid quantity",
-          description: "Please enter a valid quantity within our pricing tiers.",
-          variant: "destructive",
+      if (isKit) {
+        // Add Force Dowels Kit to cart
+        addItem({
+          id: "force-dowels-kit", // Use consistent ID for Force Dowels Kit
+          name: "Force Dowels Kit",
+          quantity: 300,
+          tier: "Kit - 300 units",
+          pricePerUnit: 0.12,
         })
-        setIsSubmitting(false)
-        return
-      }
+      } else {
+        // Get the proper pricing based on quantity
+        const tierInfo = getTierInfo(quantity)
+        if (!tierInfo.pricePerUnit) {
+          toast({
+            title: "Invalid quantity",
+            description: "Please enter a valid quantity within our pricing tiers.",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
 
-      // Add item to cart with proper pricing
-      addItem({
-        id: "force-dowels", // Use consistent ID for Force Dowels
-        name: "Force Dowels",
-        quantity,
-        tier: tierInfo.tier || selectedTier,
-        pricePerUnit: tierInfo.pricePerUnit,
-      })
+        // Add item to cart with proper pricing
+        addItem({
+          id: "force-dowels", // Use consistent ID for Force Dowels
+          name: "Force Dowels",
+          quantity,
+          tier: tierInfo.tier || selectedTier,
+          pricePerUnit: tierInfo.pricePerUnit,
+        })
+      }
 
       // Show success message
       toast({
         title: "Added to cart",
-        description: `${formatNumber(quantity)} units of Force Dowels added to your cart.`,
+        description: isKit 
+          ? "Force Dowels Kit (300 units) added to your cart."
+          : `${formatNumber(quantity)} units of Force Dowels added to your cart.`,
       })
 
       // Reset quantity to minimum
       setQuantity(5000)
       setSelectedTier("5,000-20,000")
+      setIsKit(false)
 
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -138,8 +168,16 @@ export default function OrderPage() {
 
   // Handle tier selection
   const handleTierSelect = (tier: (typeof tiers)[0]) => {
+    setIsKit(false)
     setSelectedTier(tier.range)
     setQuantity(tier.min)
+  }
+
+  // Handle kit selection
+  const handleKitSelect = () => {
+    setIsKit(true)
+    setQuantity(300)
+    setSelectedTier("Kit - 300 units")
   }
 
   // Animation variants for Framer Motion
@@ -217,12 +255,45 @@ export default function OrderPage() {
                 ))}
               </div>
 
+            {/* Force Dowels Kit Option */}
             <motion.div
               className="mt-8"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.3 }}
+            >
+              <motion.h3 className="text-xl font-bold mb-4" variants={itemVariants}>
+                Or Try Our Starter Kit
+              </motion.h3>
+              <motion.div
+                className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  isKit ? "border-amber-600 bg-amber-50" : "border-gray-200 hover:bg-gray-50"
+                }`}
+                onClick={handleKitSelect}
+                variants={itemVariants}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-semibold">Force Dowels Kit</h4>
+                    <p className="text-sm text-gray-600">Perfect for small projects and testing</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-amber-600">$36.00</span>
+                    <p className="text-sm text-gray-600">300 dowels • $0.12/unit</p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              className="mt-8"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.4 }}
             >
               <motion.h3 className="text-xl font-bold mb-2" variants={itemVariants}>
                 Need a Custom Quote?
@@ -273,7 +344,7 @@ export default function OrderPage() {
                         variant="outline"
                         size="icon"
                         onClick={handleQuantityDecrement}
-                        disabled={quantity <= 5000}
+                        disabled={isKit || quantity <= 5000}
                         className="h-10 w-10 shrink-0"
                       >
                         <Minus className="h-4 w-4" />
@@ -290,7 +361,7 @@ export default function OrderPage() {
                         variant="outline"
                         size="icon"
                         onClick={handleQuantityIncrement}
-                        disabled={quantity >= 960000}
+                        disabled={isKit || quantity >= 960000}
                         className="h-10 w-10 shrink-0"
                       >
                         <Plus className="h-4 w-4" />
@@ -307,15 +378,21 @@ export default function OrderPage() {
                           <div className="flex justify-between items-center">
                             <span className="font-medium">Price per unit:</span>
                             <span className="font-bold">
-                              {tierInfo.pricePerUnit ? `$${formatExactPrice(tierInfo.pricePerUnit)}` : 'N/A'}
+                              {isKit ? '$0.12' : (tierInfo.pricePerUnit ? `$${formatExactPrice(tierInfo.pricePerUnit)}` : 'N/A')}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="font-medium">Total price:</span>
                             <span className="text-2xl font-bold">
-                              {tierInfo.totalPrice ? formatCurrency(tierInfo.totalPrice) : 'N/A'}
+                              {isKit ? '$36.00' : (tierInfo.totalPrice ? formatCurrency(tierInfo.totalPrice) : 'N/A')}
                             </span>
                           </div>
+                          {isKit && (
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">Selected:</span>
+                              <span className="font-bold text-amber-600">Force Dowels Kit</span>
+                            </div>
+                          )}
                         </>
                       )
                     })()}
