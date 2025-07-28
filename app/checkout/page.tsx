@@ -37,8 +37,8 @@ export default function CheckoutPage() {
   })
   const [shippingError, setShippingError] = useState<string | null>(null)
   const [shippingProvider, setShippingProvider] = useState<{
-    provider: 'USPS' | 'TQL' | null;
-    expectedProvider: 'USPS' | 'TQL' | null;
+    provider: 'UPS' | 'TQL' | null;
+    expectedProvider: 'UPS' | 'TQL' | null;
     totalQuantity: number;
     fallbackUsed: boolean;
   }>({
@@ -843,10 +843,10 @@ export default function CheckoutPage() {
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center">
                         <div className={`w-2 h-2 rounded-full mr-2 ${
-                          shippingProvider.provider === 'USPS' ? 'bg-blue-500' : 'bg-green-500'
+                          shippingProvider.provider === 'UPS' ? 'bg-blue-500' : 'bg-green-500'
                         }`}></div>
                         <span className="font-medium">
-                          {shippingProvider.provider === 'USPS' ? 'USPS Shipping' : 'LTL Freight Shipping'}
+                          {shippingProvider.provider === 'UPS' ? 'UPS Shipping' : 'LTL Freight Shipping'}
                         </span>
                       </div>
                       <span className="text-gray-600">
@@ -854,9 +854,9 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-600 mt-1">
-                      {shippingProvider.provider === 'USPS'
-                        ? 'Standard parcel delivery for orders up to 5,000 dowels'
-                        : 'Professional freight delivery for bulk orders over 20,000 dowels'
+                      {shippingProvider.provider === 'UPS'
+                        ? 'Standard UPS delivery for orders under 20,000 dowels'
+                        : 'Professional freight delivery for bulk orders 20,000+ dowels'
                       }
                       {shippingProvider.fallbackUsed && (
                         <span className="text-amber-600 ml-1">
@@ -940,12 +940,12 @@ export default function CheckoutPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className={`w-3 h-3 rounded-full ${
-                              shippingProvider.provider === 'USPS' ? 'bg-blue-500' : 'bg-green-500'
+                              shippingProvider.provider === 'UPS' ? 'bg-blue-500' : 'bg-green-500'
                             } shadow-sm`}></div>
                             <div>
                               <div className="flex items-center space-x-2">
                                 <span className="font-semibold text-gray-800">
-                                  {shippingProvider.provider === 'USPS' ? 'USPS Shipping' : 'LTL Freight Shipping'}
+                                  {shippingProvider.provider === 'UPS' ? 'UPS Shipping' : 'LTL Freight Shipping'}
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
                                   {shippingRates.length} option{shippingRates.length !== 1 ? 's' : ''}
@@ -965,7 +965,7 @@ export default function CheckoutPage() {
                               <p className="text-sm text-gray-600 mt-1">
                                 {shippingProvider.provider === 'TQL'
                                   ? 'Professional freight carriers for your bulk order. Rates include pickup and delivery to commercial addresses with loading docks.'
-                                  : 'Standard USPS delivery options for your order.'
+                                  : 'Standard UPS delivery options for your order.'
                                 }
                               </p>
                             </div>
@@ -976,7 +976,7 @@ export default function CheckoutPage() {
                                 {shippingProvider.totalQuantity.toLocaleString()} dowels
                               </p>
                               <p className="text-xs text-gray-500">
-                                {shippingProvider.provider === 'USPS' ? 'Parcel delivery' : 'Freight delivery'}
+                                {shippingProvider.provider === 'UPS' ? 'Parcel delivery' : 'Freight delivery'}
                               </p>
                             </div>
                             {shippingRatesLoaded && !loadingShipping && (
@@ -1050,9 +1050,11 @@ export default function CheckoutPage() {
                                           <Badge
                                             variant="outline"
                                             className={`text-xs ${
-                                              option.carrier === 'USPS'
+                                              option.carrier === 'UPS'
                                                 ? 'border-blue-300 text-blue-700 bg-blue-50'
-                                                : 'border-green-300 text-green-700 bg-green-50'
+                                                : option.carrier === 'LTL Freight'
+                                                ? 'border-green-300 text-green-700 bg-green-50'
+                                                : 'border-gray-300 text-gray-700 bg-gray-50'
                                             }`}
                                           >
                                             {option.carrier}
@@ -1282,13 +1284,13 @@ export default function CheckoutPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Shipping Method:</span>
                       <span className="font-medium">
-                        {shippingProvider.provider === 'USPS' ? 'USPS Parcel' : 'LTL Freight'}
+                        {shippingProvider.provider === 'UPS' ? 'UPS Parcel' : 'LTL Freight'}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {shippingProvider.provider === 'USPS'
-                        ? 'Standard delivery for orders up to 5,000 dowels'
-                        : 'Professional freight delivery for bulk orders'
+                      {shippingProvider.provider === 'UPS'
+                        ? 'Standard UPS delivery for orders under 20,000 dowels'
+                        : 'Professional freight delivery for bulk orders 20,000+ dowels'
                       }
                     </p>
                   </div>

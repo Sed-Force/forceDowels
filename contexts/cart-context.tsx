@@ -84,7 +84,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prevItems) => {
       // Check if this is a Force Dowels Kit
       const isKit = item.name === "Force Dowels Kit"
-      
+
       // If it's a kit, check if one already exists
       if (isKit) {
         const existingKit = prevItems.find((i) => i.name === "Force Dowels Kit")
@@ -95,8 +95,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Check if item already exists in cart by name (for Force Dowels, combine quantities)
-      const existingItemIndex = prevItems.findIndex((i) => i.name === item.name)
+      // For Force Dowels (not kit), always consolidate by name regardless of ID
+      // This ensures that adding 5K dowels then 10K dowels results in one 15K line item
+      if (!isKit && item.name === "Force Dowels") {
+        const existingDowelIndex = prevItems.findIndex((i) => i.name === "Force Dowels")
+
+        if (existingDowelIndex >= 0) {
+          // Update existing Force Dowels item with combined quantity
+          const updatedItems = [...prevItems]
+          const newQuantity = updatedItems[existingDowelIndex].quantity + item.quantity
+          const tier = getPricingTier(newQuantity)
+          const pricePerUnit = calculatePricePerUnit(newQuantity)
+
+          updatedItems[existingDowelIndex] = {
+            ...updatedItems[existingDowelIndex],
+            quantity: newQuantity,
+            tier: tier?.range || updatedItems[existingDowelIndex].tier,
+            pricePerUnit: pricePerUnit || updatedItems[existingDowelIndex].pricePerUnit,
+          }
+
+          console.log(`Consolidated Force Dowels: ${updatedItems[existingDowelIndex].quantity} total dowels`)
+          return updatedItems
+        }
+      }
+
+      // For other items (including kits), check by exact ID match
+      const existingItemIndex = prevItems.findIndex((i) => i.id === item.id)
 
       if (existingItemIndex >= 0 && !isKit) {
         // Update existing item with new quantity and recalculate pricing (not for kits)
