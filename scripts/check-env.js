@@ -47,6 +47,18 @@ const requiredVars = [
     required: true
   },
   {
+    name: 'UPS_CLIENT_ID',
+    description: 'UPS API client ID for shipping calculations',
+    example: 'your_ups_client_id',
+    required: true
+  },
+  {
+    name: 'UPS_CLIENT_SECRET',
+    description: 'UPS API client secret for shipping calculations',
+    example: 'your_ups_client_secret',
+    required: true
+  },
+  {
     name: 'NEXT_PUBLIC_BASE_URL',
     description: 'Base URL of your application',
     example: 'http://localhost:3000',

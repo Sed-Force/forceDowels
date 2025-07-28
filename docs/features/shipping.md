@@ -35,23 +35,23 @@ The system uses consistent packaging tiers across all providers:
 - **20,000 dowels** → Box → 20×20×12 inches → 77 lbs
 - **80,000+ dowels** → Pallets with increasing weights
 
-## USPS Integration
+## UPS Integration
 
 ### Configuration
 ```env
-USPS_CLIENT_ID=your_client_id
-USPS_CLIENT_SECRET=your_client_secret
+UPS_CLIENT_ID=your_client_id
+UPS_CLIENT_SECRET=your_client_secret
 ```
 
 ### Features
 - Real-time rate calculation
-- Multiple service levels (Ground Advantage, Priority, Express)
+- Multiple service levels (Ground, Next Day Air, 2nd Day Air, etc.)
 - Automatic package dimension calculation
 - Delivery time estimates
 
 ### Implementation
-Located in `lib/usps.ts` with functions:
-- `getUSPSShippingRates()` - Get rates for an address
+Located in `lib/ups.ts` with functions:
+- `getUPSShippingRates()` - Get rates for an address
 - `getTierForQuantity()` - Determine packaging tier
 - `calculatePackageDimensions()` - Calculate package specs
 
@@ -109,23 +109,23 @@ Located in `lib/tql-service.ts` with the `TQLService` class providing:
 ```json
 {
   "success": true,
-  "provider": "USPS",
+  "provider": "UPS",
   "rates": [{
-    "id": "usps-ground-advantage",
-    "service": "USPS_GROUND_ADVANTAGE",
-    "carrier": "USPS",
+    "id": "ups-03-45.67",
+    "service": "UPS Ground",
+    "carrier": "UPS",
     "rate": 45.67,
     "currency": "USD",
-    "delivery_days": "3-5",
-    "provider": "USPS"
+    "delivery_days": 3,
+    "provider": "UPS"
   }]
 }
 ```
 
 ## Error Handling
 
-### USPS Fallback
-If USPS API fails, the system provides manual shipping recommendations.
+### UPS Fallback
+If UPS API fails, the system provides manual shipping recommendations.
 
 ### TQL Fallback
 If TQL freight fails for large orders, manual freight quotes are recommended.

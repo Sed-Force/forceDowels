@@ -1,6 +1,6 @@
-// Unified shipping service that routes between USPS and TQL based on quantity
+// Unified shipping service that routes between UPS and TQL based on quantity
 import { CartItem } from '@/contexts/cart-context';
-import { getUSPSShippingRates, ShippingAddress as USPSAddress, USPSRate, getTierForQuantity } from './usps';
+import { getUPSShippingRates, ShippingAddress as UPSAddress, UPSRate, getTierForQuantity } from './ups';
 import { TQLService, TQLAddress, transformCartToTQLQuote, TQLRate } from './tql-service';
 import { ShippingOption } from './shipping';
 
@@ -61,8 +61,8 @@ export class UnifiedShippingService {
 
     // Route to appropriate provider based on quantity
     if (totalQuantity < 20000) {
-      // Use USPS for orders under 20K (5K, 10K, 15K tiers)
-      return this.getUSPSRates(toAddress, cartItems);
+      // Use UPS for orders under 20K (5K, 10K, 15K tiers)
+      return this.getUPSRates(toAddress, cartItems);
     } else {
       // Try TQL for orders >= 20K, fall back with weight check
       try {
@@ -73,7 +73,7 @@ export class UnifiedShippingService {
       } catch (error) {
         console.warn(`⚠️  TQL shipping failed for ${totalQuantity} dowels:`, error.message);
 
-        // Check if the package is too heavy for USPS (70 lb limit)
+        // Check if the package is too heavy for UPS (150 lb limit)
         const tier = getTierForQuantity(totalQuantity);
         console.log(`📦 Package details for ${totalQuantity} dowels: ${tier.tierName}, ${tier.weightLbs} lbs`);
 
@@ -130,14 +130,14 @@ export class UnifiedShippingService {
   }
 
   /**
-   * Get USPS rates and transform to unified format
+   * Get UPS rates and transform to unified format
    */
-  private async getUSPSRates(
+  private async getUPSRates(
     toAddress: UnifiedShippingAddress,
     cartItems: CartItem[]
   ): Promise<UnifiedShippingRate[]> {
     try {
-      const uspsAddress: USPSAddress = {
+      const upsAddress: UPSAddress = {
         name: toAddress.name,
         address: toAddress.address,
         city: toAddress.city,
@@ -146,9 +146,9 @@ export class UnifiedShippingService {
         country: toAddress.country
       };
 
-      const uspsRates = await getUSPSShippingRates(uspsAddress, cartItems);
-      
-      return uspsRates.map((rate: USPSRate) => ({
+      const upsRates = await getUPSShippingRates(upsAddress, cartItems);
+
+      return upsRates.map((rate: UPSRate) => ({
         id: rate.id,
         service: rate.service,
         carrier: rate.carrier,
@@ -157,13 +157,15 @@ export class UnifiedShippingService {
         delivery_days: rate.delivery_days,
         delivery_date: rate.delivery_date,
         delivery_date_guaranteed: rate.delivery_date_guaranteed,
-        provider: 'USPS' as const,
+        provider: 'UPS' as const,
         displayName: rate.displayName || `${rate.carrier} ${rate.service}`,
-        estimatedDelivery: rate.estimatedDelivery || `${rate.delivery_days || 'N/A'} business days`
+        estimatedDelivery: rate.estimatedDelivery || `${rate.delivery_days || 'N/A'} business days`,
+        // Add note if this is an estimated rate
+        note: rate.service.includes('Estimated') ? 'Estimated rate - actual rates may vary' : undefined
       }));
     } catch (error) {
-      console.error('USPS shipping calculation error:', error);
-      throw new Error('Failed to calculate USPS shipping rates');
+      console.error('UPS shipping calculation error:', error);
+      throw new Error('Failed to calculate UPS shipping rates');
     }
   }
 
@@ -213,8 +215,8 @@ export class UnifiedShippingService {
   /**
    * Determine which provider should be used for a given quantity
    */
-  static getProviderForQuantity(quantity: number): 'USPS' | 'TQL' {
-    return quantity < 20000 ? 'USPS' : 'TQL';
+  static getProviderForQuantity(quantity: number): 'UPS' | 'TQL' {
+    return quantity < 20000 ? 'UPS' : 'TQL';
   }
 
   /**

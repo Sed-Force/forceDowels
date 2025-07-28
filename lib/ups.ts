@@ -1,0 +1,386 @@
+// UPS shipping service for calculating real-time shipping rates
+import { CartItem } from '@/contexts/cart-context';
+
+export interface ShippingAddress {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
+
+export interface UPSRate {
+  id: string;
+  service: string;
+  carrier: string;
+  rate: number;
+  currency: string;
+  delivery_days?: number;
+  delivery_date?: string;
+  delivery_date_guaranteed?: boolean;
+  serviceCode: string;
+  description: string;
+}
+
+export interface UPSPackageDimensions {
+  length: number;
+  width: number;
+  height: number;
+  weight: number;
+}
+
+// Tier data for Force Dowels packaging and shipping
+// Updated with corrected packaging specifications
+export const TIER_DATA = [
+  { tierName: "Small Box",             maxQty: 5_000,     pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  18.6, dimsIn: [15, 15, 10] },   // 1 small box
+  { tierName: "Medium Box",            maxQty: 10_000,    pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  38,   dimsIn: [18, 18, 11] },   // 1 medium box
+  { tierName: "Large Box",             maxQty: 15_000,    pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  56.6, dimsIn: [19, 19, 12] },   // 1 large box (18.6 + 38 = 56.6 lbs)
+  { tierName: "Box",                   maxQty: 20_000,    pkgCount: 1,
+    pkgType: "BOX",    weightLbs:  77,   dimsIn: [20, 20, 12] },   // 1 box
+  { tierName: "Pallet-4-box",          maxQty: 80_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs: 458,   dimsIn: [40, 48,  6] },   // 1 pallet / 4 boxes
+  { tierName: "Pallet-8-box",          maxQty:160_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs: 766,   dimsIn: [40, 48, 12] },   // 1 pallet / 8 boxes
+  { tierName: "Pallet-12-box",         maxQty:240_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_074,  dimsIn: [40, 48, 18] },   // 1 pallet / 12 boxes
+  { tierName: "Pallet-16-box",         maxQty:320_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_382,  dimsIn: [40, 48, 24] },   // 1 pallet / 16 boxes
+  { tierName: "Pallet-20-box",         maxQty:400_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_690,  dimsIn: [40, 48, 30] },   // 1 pallet / 20 boxes
+  { tierName: "Pallet-24-box",         maxQty:480_000,    pkgCount: 1,
+    pkgType: "PALLET", weightLbs:1_998,  dimsIn: [40, 48, 36] },   // 1 pallet / 24 boxes
+  { tierName: "Two-Pallet (48 boxes)", maxQty:960_000,    pkgCount: 2,
+    pkgType: "PALLET", weightLbs:2_000,  dimsIn: [40, 48, 36] }    // 2 pallets, 2,000 lbs each (4,000 lbs total)
+];
+
+// Your business address (from address for shipping calculations)
+const FROM_ADDRESS = {
+  name: "Force Dowel Company",
+  streetAddress: "4455 E Nunneley Rd, Ste 103",
+  city: "Gilbert",
+  state: "AZ",
+  zip: "85296",
+  country: "US"
+};
+
+// UPS API configuration
+const UPS_BASE_URL = 'https://onlinetools.ups.com';
+
+/**
+ * Get the appropriate tier for a given quantity
+ */
+export function getTierForQuantity(quantity: number) {
+  // Find the tier that can handle this quantity
+  for (const tier of TIER_DATA) {
+    if (quantity <= tier.maxQty) {
+      return tier;
+    }
+  }
+  // If quantity exceeds all tiers, use the largest tier
+  return TIER_DATA[TIER_DATA.length - 1];
+}
+
+/**
+ * Calculate package dimensions and weight based on cart items using tier data
+ * Uses predefined tier brackets for accurate shipping calculations
+ */
+function calculatePackageDimensions(items: CartItem[]): UPSPackageDimensions {
+  const totalDowels = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Get the appropriate tier for this quantity
+  const tier = getTierForQuantity(totalDowels);
+
+  // Use tier dimensions and weight
+  const [length, width, height] = tier.dimsIn;
+  const weight = tier.weightLbs;
+
+  console.log(`Package estimation for ${totalDowels} dowels using tier "${tier.tierName}":`, {
+    dimensions: `${length}" x ${width}" x ${height}"`,
+    weight: `${weight} lbs`,
+    packageType: tier.pkgType,
+    packageCount: tier.pkgCount,
+    tier: tier.tierName
+  });
+
+  return {
+    length,
+    width,
+    height,
+    weight
+  };
+}
+
+/**
+ * Get UPS service name from service code
+ */
+function getUPSServiceName(code: string): string {
+  const serviceNames: { [key: string]: string } = {
+    '01': 'UPS Next Day Air',
+    '02': 'UPS 2nd Day Air',
+    '03': 'UPS Ground',
+    '07': 'UPS Worldwide Express',
+    '08': 'UPS Worldwide Expedited',
+    '11': 'UPS Standard',
+    '12': 'UPS 3 Day Select',
+    '13': 'UPS Next Day Air Saver',
+    '14': 'UPS Next Day Air Early A.M.',
+    '54': 'UPS Worldwide Express Plus',
+    '59': 'UPS 2nd Day Air A.M.',
+    '65': 'UPS Saver'
+  };
+  return serviceNames[code] || `UPS Service ${code}`;
+}
+
+/**
+ * Get OAuth 2.0 access token from UPS
+ */
+async function getUPSAccessToken(): Promise<string> {
+  const clientId = process.env.UPS_CLIENT_ID;
+  const clientSecret = process.env.UPS_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('UPS API credentials not configured');
+  }
+
+  try {
+    // UPS OAuth 2.0 endpoint - using Basic Auth
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const params = new URLSearchParams({
+      grant_type: 'client_credentials'
+    });
+
+    console.log('UPS OAuth request to:', `${UPS_BASE_URL}/security/v1/oauth/token`);
+    console.log('UPS OAuth params:', { grant_type: 'client_credentials' });
+
+    const response = await fetch(`${UPS_BASE_URL}/security/v1/oauth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${credentials}`,
+      },
+      body: params.toString(),
+    });
+
+    console.log('UPS OAuth response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('UPS OAuth error response:', errorText);
+      throw new Error(`UPS OAuth failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('UPS OAuth success, token received');
+    return data.access_token;
+  } catch (error) {
+    console.error('UPS OAuth error:', error);
+    throw new Error('Failed to authenticate with UPS API');
+  }
+}
+
+/**
+ * Get shipping rates from UPS Rating API
+ */
+export async function getUPSShippingRates(
+  toAddress: ShippingAddress,
+  items: CartItem[]
+): Promise<UPSRate[]> {
+  try {
+    const accessToken = await getUPSAccessToken();
+    const dimensions = calculatePackageDimensions(items);
+
+    // UPS Rating API request body
+    const requestBody = {
+      RateRequest: {
+        Request: {
+          TransactionReference: {
+            CustomerContext: "Force Dowels Shipping Rate Request"
+          }
+        },
+        Shipment: {
+          Shipper: {
+            Name: FROM_ADDRESS.name,
+            ShipperNumber: process.env.UPS_ACCOUNT_NUMBER || "123456", // UPS Account Number
+            Address: {
+              AddressLine: [FROM_ADDRESS.streetAddress],
+              City: FROM_ADDRESS.city,
+              StateProvinceCode: FROM_ADDRESS.state,
+              PostalCode: FROM_ADDRESS.zip,
+              CountryCode: FROM_ADDRESS.country
+            }
+          },
+          ShipTo: {
+            Name: toAddress.name,
+            Address: {
+              AddressLine: [toAddress.address],
+              City: toAddress.city,
+              StateProvinceCode: toAddress.state,
+              PostalCode: toAddress.zip,
+              CountryCode: toAddress.country
+            }
+          },
+          ShipFrom: {
+            Name: FROM_ADDRESS.name,
+            Address: {
+              AddressLine: [FROM_ADDRESS.streetAddress],
+              City: FROM_ADDRESS.city,
+              StateProvinceCode: FROM_ADDRESS.state,
+              PostalCode: FROM_ADDRESS.zip,
+              CountryCode: FROM_ADDRESS.country
+            }
+          },
+          Package: [{
+            PackagingType: {
+              Code: "02", // Customer Supplied Package
+              Description: "Package"
+            },
+            Dimensions: {
+              UnitOfMeasurement: {
+                Code: "IN",
+                Description: "Inches"
+              },
+              Length: dimensions.length.toString(),
+              Width: dimensions.width.toString(),
+              Height: dimensions.height.toString()
+            },
+            PackageWeight: {
+              UnitOfMeasurement: {
+                Code: "LBS",
+                Description: "Pounds"
+              },
+              Weight: dimensions.weight.toString()
+            }
+          }]
+        }
+      }
+    };
+
+    console.log('UPS API request:', JSON.stringify(requestBody, null, 2));
+
+    // Use Shop option to get multiple service rates
+    const response = await fetch(`${UPS_BASE_URL}/api/rating/v1/Shop`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('UPS API error response:', errorText);
+      throw new Error(`UPS API failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('UPS API response:', JSON.stringify(data, null, 2));
+
+    // Convert UPS response to our format
+    const rates: UPSRate[] = [];
+
+    if (data.RateResponse && data.RateResponse.RatedShipment) {
+      const ratedShipments = Array.isArray(data.RateResponse.RatedShipment)
+        ? data.RateResponse.RatedShipment
+        : [data.RateResponse.RatedShipment];
+
+      ratedShipments.forEach((shipment: any) => {
+        const service = shipment.Service;
+        const totalCharges = shipment.TotalCharges;
+        const timeInTransit = shipment.TimeInTransit;
+
+        rates.push({
+          id: `ups-${service.Code}-${totalCharges.MonetaryValue}`,
+          service: service.Description || getUPSServiceName(service.Code),
+          carrier: 'UPS',
+          rate: parseFloat(totalCharges.MonetaryValue) || 0,
+          currency: totalCharges.CurrencyCode || 'USD',
+          serviceCode: service.Code,
+          description: service.Description || getUPSServiceName(service.Code),
+          delivery_days: timeInTransit?.ServiceSummary?.EstimatedArrival?.BusinessDaysInTransit
+            ? parseInt(timeInTransit.ServiceSummary.EstimatedArrival.BusinessDaysInTransit)
+            : undefined,
+        });
+      });
+    }
+
+    // If no rates returned, log warning
+    if (rates.length === 0) {
+      console.warn('No UPS shipping rates returned from API');
+    }
+
+    // Sort by price (cheapest first)
+    return rates.sort((a, b) => a.rate - b.rate);
+
+  } catch (error) {
+    console.error('UPS shipping calculation error:', error);
+
+    // If UPS API fails, provide estimated rates based on package weight and distance
+    console.log('🔄 Providing estimated UPS rates due to API failure');
+    return getEstimatedUPSRates(toAddress, items);
+  }
+}
+
+/**
+ * Provide estimated UPS rates when API is unavailable
+ * Based on package weight and typical UPS pricing
+ */
+function getEstimatedUPSRates(toAddress: ShippingAddress, items: CartItem[]): UPSRate[] {
+  const dimensions = calculatePackageDimensions(items);
+  const weight = dimensions.weight;
+
+  // Base rates per pound (estimated)
+  const baseRatePerLb = 0.85;
+  const groundRate = Math.max(8.50, weight * baseRatePerLb);
+  const airRate = groundRate * 2.2;
+  const expressRate = groundRate * 3.5;
+
+  console.log(`📦 Estimated UPS rates for ${weight} lbs package:`);
+
+  const estimatedRates: UPSRate[] = [
+    {
+      id: 'ups-ground-estimated',
+      service: 'UPS Ground (Estimated)',
+      carrier: 'UPS',
+      rate: Math.round(groundRate * 100) / 100,
+      currency: 'USD',
+      serviceCode: '03',
+      description: 'UPS Ground - Estimated Rate',
+      delivery_days: 5
+    },
+    {
+      id: 'ups-2day-estimated',
+      service: 'UPS 2nd Day Air (Estimated)',
+      carrier: 'UPS',
+      rate: Math.round(airRate * 100) / 100,
+      currency: 'USD',
+      serviceCode: '02',
+      description: 'UPS 2nd Day Air - Estimated Rate',
+      delivery_days: 2
+    },
+    {
+      id: 'ups-nextday-estimated',
+      service: 'UPS Next Day Air (Estimated)',
+      carrier: 'UPS',
+      rate: Math.round(expressRate * 100) / 100,
+      currency: 'USD',
+      serviceCode: '01',
+      description: 'UPS Next Day Air - Estimated Rate',
+      delivery_days: 1
+    }
+  ];
+
+  estimatedRates.forEach(rate => {
+    console.log(`  ${rate.service}: $${rate.rate}`);
+  });
+
+  return estimatedRates;
+}
+
+
+

@@ -101,7 +101,7 @@ Guidelines for contributing to the project.
 - **PostgreSQL** - Database (Neon recommended)
 
 ### Shipping & Logistics
-- **USPS API** - Small package shipping (< 20K dowels)
+- **UPS API** - Small package shipping (< 20K dowels)
 - **TQL Freight** - Large order shipping (≥ 20K dowels)
 
 ### Development Tools

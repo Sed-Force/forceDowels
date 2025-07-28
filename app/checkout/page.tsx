@@ -856,7 +856,7 @@ export default function CheckoutPage() {
                     <p className="text-xs text-gray-600 mt-1">
                       {shippingProvider.provider === 'USPS'
                         ? 'Standard parcel delivery for orders up to 5,000 dowels'
-                        : 'Professional freight delivery for bulk orders over 5,000 dowels'
+                        : 'Professional freight delivery for bulk orders over 20,000 dowels'
                       }
                       {shippingProvider.fallbackUsed && (
                         <span className="text-amber-600 ml-1">

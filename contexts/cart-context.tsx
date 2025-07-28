@@ -82,11 +82,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Add an item to the cart
   const addItem = (item: CartItem) => {
     setItems((prevItems) => {
+      // Check if this is a Force Dowels Kit
+      const isKit = item.name === "Force Dowels Kit"
+      
+      // If it's a kit, check if one already exists
+      if (isKit) {
+        const existingKit = prevItems.find((i) => i.name === "Force Dowels Kit")
+        if (existingKit) {
+          // Kit already exists, don't add another one
+          console.warn("Force Dowels Kit already in cart. Only one kit allowed per order.")
+          return prevItems
+        }
+      }
+
       // Check if item already exists in cart by name (for Force Dowels, combine quantities)
       const existingItemIndex = prevItems.findIndex((i) => i.name === item.name)
 
-      if (existingItemIndex >= 0) {
-        // Update existing item with new quantity and recalculate pricing
+      if (existingItemIndex >= 0 && !isKit) {
+        // Update existing item with new quantity and recalculate pricing (not for kits)
         const updatedItems = [...prevItems]
         const newQuantity = updatedItems[existingItemIndex].quantity + item.quantity
         const tier = getPricingTier(newQuantity)
@@ -101,12 +114,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return updatedItems
       } else {
         // Add new item with proper pricing
-        const tier = getPricingTier(item.quantity)
-        const pricePerUnit = calculatePricePerUnit(item.quantity)
+        const tier = isKit ? null : getPricingTier(item.quantity)
+        const pricePerUnit = isKit ? item.pricePerUnit : calculatePricePerUnit(item.quantity)
 
         return [...prevItems, {
           ...item,
-          tier: tier?.range || item.tier,
+          tier: isKit ? item.tier : (tier?.range || item.tier),
           pricePerUnit: pricePerUnit || item.pricePerUnit,
         }]
       }
@@ -115,12 +128,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Update item quantity and recalculate tier and price
   const updateItemQuantity = (id: string, quantity: number) => {
-    // Round quantity to valid 5,000-unit increment
-    const validQuantity = roundToValidQuantity(quantity)
-
     setItems((prevItems) =>
       prevItems.map((item) => {
         if (item.id === id) {
+          // Prevent modifying kit quantities
+          if (item.name === "Force Dowels Kit") {
+            console.warn("Cannot modify Force Dowels Kit quantity")
+            return item
+          }
+          
+          // Round quantity to valid 5,000-unit increment
+          const validQuantity = roundToValidQuantity(quantity)
+          
           // Recalculate tier and price based on new quantity
           const tier = getPricingTier(validQuantity)
           const pricePerUnit = calculatePricePerUnit(validQuantity)
