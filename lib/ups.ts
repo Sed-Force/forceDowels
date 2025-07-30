@@ -98,14 +98,6 @@ function calculatePackageDimensions(items: CartItem[]): UPSPackageDimensions {
   const [length, width, height] = tier.dimsIn;
   const weight = tier.weightLbs;
 
-  console.log(`Package estimation for ${totalDowels} dowels using tier "${tier.tierName}":`, {
-    dimensions: `${length}" x ${width}" x ${height}"`,
-    weight: `${weight} lbs`,
-    packageType: tier.pkgType,
-    packageCount: tier.pkgCount,
-    tier: tier.tierName
-  });
-
   return {
     length,
     width,
@@ -151,12 +143,6 @@ async function getUPSAccessToken(): Promise<string> {
     throw new Error('UPS_ACCOUNT_NUMBER not configured');
   }
 
-  console.log('UPS Config check:', {
-    clientId: clientId ? `${clientId.substring(0, 10)}...` : 'missing',
-    clientSecret: clientSecret ? `${clientSecret.substring(0, 10)}...` : 'missing',
-    accountNumber: accountNumber ? `${accountNumber}` : 'missing'
-  });
-
   try {
     // UPS OAuth 2.0 endpoint - using Basic Auth
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
@@ -164,9 +150,6 @@ async function getUPSAccessToken(): Promise<string> {
     const params = new URLSearchParams({
       grant_type: 'client_credentials'
     });
-
-    console.log('UPS OAuth request to:', `${UPS_BASE_URL}/security/v1/oauth/token`);
-    console.log('UPS OAuth params:', { grant_type: 'client_credentials' });
 
     const response = await fetch(`${UPS_BASE_URL}/security/v1/oauth/token`, {
       method: 'POST',
@@ -177,19 +160,14 @@ async function getUPSAccessToken(): Promise<string> {
       body: params.toString(),
     });
 
-    console.log('UPS OAuth response status:', response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('UPS OAuth error response:', errorText);
       throw new Error(`UPS OAuth failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('UPS OAuth success, token received');
     return data.access_token;
   } catch (error) {
-    console.error('UPS OAuth error:', error);
     throw new Error('Failed to authenticate with UPS API');
   }
 }
@@ -271,7 +249,7 @@ export async function getUPSShippingRates(
       }
     };
 
-    console.log('UPS API request:', JSON.stringify(requestBody, null, 2));
+
 
     // Use Shop option to get multiple service rates
     const response = await fetch(`${UPS_BASE_URL}/api/rating/v1/Shop`, {
@@ -285,18 +263,10 @@ export async function getUPSShippingRates(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('UPS Rating API error response:', errorText);
-      console.error('UPS Rating API request details:', {
-        url: `${UPS_BASE_URL}/api/rating/v1/Shop`,
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
       throw new Error(`UPS Rating API failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('UPS API response:', JSON.stringify(data, null, 2));
 
     // Convert UPS response to our format
     const rates: UPSRate[] = [];
@@ -326,16 +296,10 @@ export async function getUPSShippingRates(
       });
     }
 
-    // If no rates returned, log warning
-    if (rates.length === 0) {
-      console.warn('No UPS shipping rates returned from API');
-    }
-
     // Sort by price (cheapest first)
     return rates.sort((a, b) => a.rate - b.rate);
 
   } catch (error) {
-    console.error('UPS shipping calculation error:', error);
     throw new Error('UPS shipping service is currently unavailable. Please try again later.');
   }
 }
