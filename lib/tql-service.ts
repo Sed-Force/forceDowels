@@ -91,9 +91,6 @@ export class TQLService {
     // Use production endpoint (staging has same postal code issues)
     const endpoint = `${this.baseUrl}/ltl/quotes`;
 
-    // Log basic request info for monitoring
-    console.log(`🔍 TQL Quote Request: ${quoteData.origin.city}, ${quoteData.origin.state} → ${quoteData.destination.city}, ${quoteData.destination.state}`);
-
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -106,12 +103,10 @@ export class TQLService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      console.log('❌ TQL Error response:', JSON.stringify(error, null, 2));
       throw new Error(`TQL quote creation failed: ${response.status} - ${JSON.stringify(error)}`);
     }
 
     const result = await response.json();
-    console.log(`✅ TQL Success: Found ${result.content.carrierPrices?.length || 0} shipping options`);
     return result;
   }
 

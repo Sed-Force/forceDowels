@@ -1,6 +1,6 @@
 // Unified shipping service that routes between UPS and TQL based on quantity
 import { CartItem } from '@/contexts/cart-context';
-import { getUPSShippingRates, ShippingAddress as UPSAddress, UPSRate, getTierForQuantity } from './ups';
+import { getUPSShippingRates, ShippingAddress as UPSAddress, UPSRate } from './ups';
 import { TQLService, TQLAddress, transformCartToTQLQuote, TQLRate } from './tql-service';
 import { ShippingOption } from './shipping';
 
@@ -22,7 +22,7 @@ export interface UnifiedShippingRate {
   delivery_days?: number;
   delivery_date?: string;
   delivery_date_guaranteed?: boolean;
-  provider: 'USPS' | 'TQL';
+  provider: 'UPS' | 'TQL';
   displayName: string;
   estimatedDelivery: string;
 }
@@ -57,8 +57,6 @@ export class UnifiedShippingService {
   ): Promise<UnifiedShippingRate[]> {
     const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    console.log(`Getting shipping rates for ${totalQuantity} dowels`);
-
     // Route to appropriate provider based on quantity
     if (totalQuantity < 20000) {
       // Use UPS for orders under 20K (5K, 10K, 15K tiers)
@@ -66,30 +64,17 @@ export class UnifiedShippingService {
     } else {
       // Try TQL for orders >= 20K, fall back with weight check
       try {
-        console.log(`Attempting TQL shipping for ${totalQuantity} dowels...`);
         const tqlRates = await this.getTQLRates(toAddress, cartItems);
-        console.log(`✅ TQL shipping successful for ${totalQuantity} dowels`);
         return tqlRates;
       } catch (error) {
-        console.warn(`⚠️  TQL shipping failed for ${totalQuantity} dowels:`, error.message);
-
-        // Check if the package is too heavy for UPS (150 lb limit)
-        const tier = getTierForQuantity(totalQuantity);
-        console.log(`📦 Package details for ${totalQuantity} dowels: ${tier.tierName}, ${tier.weightLbs} lbs`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
 
         // Check if this is a TQL authentication/configuration issue or location issue
-        if (error.message.includes('TQL authentication failed') ||
-            error.message.includes('Failed to authenticate with TQL API') ||
-            error.message.includes('LOCATION_MISMATCH') ||
-            error.message.includes('Please enter a valid city') ||
-            error.message.includes('postal code/ country combination')) {
-
-          const issueType = error.message.includes('LOCATION_MISMATCH') || error.message.includes('Please enter a valid city') || error.message.includes('postal code/ country combination')
-            ? 'location not serviced'
-            : 'authentication issue';
-
-          console.warn(`🔧 TQL ${issueType} detected - providing manual quote option`);
-          console.log(`🔧 Full error message: ${error.message}`);
+        if (errorMessage.includes('TQL authentication failed') ||
+            errorMessage.includes('Failed to authenticate with TQL API') ||
+            errorMessage.includes('LOCATION_MISMATCH') ||
+            errorMessage.includes('Please enter a valid city') ||
+            errorMessage.includes('postal code/ country combination')) {
 
           // Return a manual quote option for TQL orders when TQL fails
           return [{
@@ -106,10 +91,6 @@ export class UnifiedShippingService {
             estimatedDelivery: 'Contact for quote: (480) 581-7145'
           }];
         }
-
-        // For all TQL failures on orders >=20K, recommend manual calculation
-        console.error(`❌ TQL freight shipping failed for ${totalQuantity} dowels (${tier.weightLbs} lbs)`);
-        console.error(`💡 Orders >=20K dowels require LTL freight shipping - manual quote needed`);
 
         // Return a manual quote option for all TQL failures
         return [{
@@ -158,13 +139,10 @@ export class UnifiedShippingService {
         delivery_date: rate.delivery_date,
         delivery_date_guaranteed: rate.delivery_date_guaranteed,
         provider: 'UPS' as const,
-        displayName: rate.displayName || `${rate.carrier} ${rate.service}`,
-        estimatedDelivery: rate.estimatedDelivery || `${rate.delivery_days || 'N/A'} business days`,
-        // Add note if this is an estimated rate
-        note: rate.service.includes('Estimated') ? 'Estimated rate - actual rates may vary' : undefined
+        displayName: `${rate.carrier} ${rate.service}`,
+        estimatedDelivery: rate.delivery_days ? `${rate.delivery_days} business days` : 'Contact for delivery estimate'
       }));
     } catch (error) {
-      console.error('UPS shipping calculation error:', error);
       throw new Error('Failed to calculate UPS shipping rates');
     }
   }
@@ -204,7 +182,7 @@ export class UnifiedShippingService {
       rate: rate.customerRate,
       currency: 'USD',
       delivery_days: rate.transitDays,
-      delivery_date: null, // TQL doesn't provide specific delivery dates
+      delivery_date: undefined, // TQL doesn't provide specific delivery dates
       delivery_date_guaranteed: false, // TQL doesn't guarantee delivery dates
       provider: 'TQL' as const,
       displayName: `${rate.carrier} ${rate.serviceLevel}`,
