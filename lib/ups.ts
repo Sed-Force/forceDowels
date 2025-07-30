@@ -31,16 +31,16 @@ export interface UPSPackageDimensions {
 }
 
 // Tier data for Force Dowels packaging and shipping
-// Updated with corrected packaging specifications
+// Updated with corrected weight calculations based on consistent scaling
 export const TIER_DATA = [
   { tierName: "Small Box",             maxQty: 5_000,     pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  18.6, dimsIn: [15, 15, 10] },   // 1 small box
+    pkgType: "BOX",    weightLbs:  18.6, dimsIn: [15, 15, 10] },   // 1 small box (baseline)
   { tierName: "Medium Box",            maxQty: 10_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  38,   dimsIn: [18, 18, 11] },   // 1 medium box
+    pkgType: "BOX",    weightLbs:  38,   dimsIn: [18, 18, 11] },   // 1 medium box (baseline)
   { tierName: "Large Box",             maxQty: 15_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  56.6, dimsIn: [19, 19, 12] },   // 1 large box (18.6 + 38 = 56.6 lbs)
+    pkgType: "BOX",    weightLbs:  57,   dimsIn: [19, 19, 12] },   // 1 large box (15K dowels + packaging)
   { tierName: "Box",                   maxQty: 20_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  77,   dimsIn: [20, 20, 12] },   // 1 box
+    pkgType: "BOX",    weightLbs:  76,   dimsIn: [20, 20, 12] },   // 1 box (20K dowels + packaging)
   { tierName: "Pallet-4-box",          maxQty: 80_000,    pkgCount: 1,
     pkgType: "PALLET", weightLbs: 458,   dimsIn: [40, 48,  6] },   // 1 pallet / 4 boxes
   { tierName: "Pallet-8-box",          maxQty:160_000,    pkgCount: 1,
@@ -146,6 +146,17 @@ async function getUPSAccessToken(): Promise<string> {
     throw new Error('UPS API credentials not configured');
   }
 
+  const accountNumber = process.env.UPS_ACCOUNT_NUMBER;
+  if (!accountNumber) {
+    throw new Error('UPS_ACCOUNT_NUMBER not configured');
+  }
+
+  console.log('UPS Config check:', {
+    clientId: clientId ? `${clientId.substring(0, 10)}...` : 'missing',
+    clientSecret: clientSecret ? `${clientSecret.substring(0, 10)}...` : 'missing',
+    accountNumber: accountNumber ? `${accountNumber}` : 'missing'
+  });
+
   try {
     // UPS OAuth 2.0 endpoint - using Basic Auth
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
@@ -205,7 +216,7 @@ export async function getUPSShippingRates(
         Shipment: {
           Shipper: {
             Name: FROM_ADDRESS.name,
-            ShipperNumber: process.env.UPS_ACCOUNT_NUMBER || "123456", // UPS Account Number
+            ShipperNumber: process.env.UPS_ACCOUNT_NUMBER, // UPS Account Number
             Address: {
               AddressLine: [FROM_ADDRESS.streetAddress],
               City: FROM_ADDRESS.city,
@@ -274,8 +285,14 @@ export async function getUPSShippingRates(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('UPS API error response:', errorText);
-      throw new Error(`UPS API failed: ${response.status} ${response.statusText}`);
+      console.error('UPS Rating API error response:', errorText);
+      console.error('UPS Rating API request details:', {
+        url: `${UPS_BASE_URL}/api/rating/v1/Shop`,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      throw new Error(`UPS Rating API failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -319,68 +336,11 @@ export async function getUPSShippingRates(
 
   } catch (error) {
     console.error('UPS shipping calculation error:', error);
-
-    // If UPS API fails, provide estimated rates based on package weight and distance
-    console.log('🔄 Providing estimated UPS rates due to API failure');
-    return getEstimatedUPSRates(toAddress, items);
+    throw new Error('UPS shipping service is currently unavailable. Please try again later.');
   }
 }
 
-/**
- * Provide estimated UPS rates when API is unavailable
- * Based on package weight and typical UPS pricing
- */
-function getEstimatedUPSRates(toAddress: ShippingAddress, items: CartItem[]): UPSRate[] {
-  const dimensions = calculatePackageDimensions(items);
-  const weight = dimensions.weight;
 
-  // Base rates per pound (estimated)
-  const baseRatePerLb = 0.85;
-  const groundRate = Math.max(8.50, weight * baseRatePerLb);
-  const airRate = groundRate * 2.2;
-  const expressRate = groundRate * 3.5;
-
-  console.log(`📦 Estimated UPS rates for ${weight} lbs package:`);
-
-  const estimatedRates: UPSRate[] = [
-    {
-      id: 'ups-ground-estimated',
-      service: 'UPS Ground (Estimated)',
-      carrier: 'UPS',
-      rate: Math.round(groundRate * 100) / 100,
-      currency: 'USD',
-      serviceCode: '03',
-      description: 'UPS Ground - Estimated Rate',
-      delivery_days: 5
-    },
-    {
-      id: 'ups-2day-estimated',
-      service: 'UPS 2nd Day Air (Estimated)',
-      carrier: 'UPS',
-      rate: Math.round(airRate * 100) / 100,
-      currency: 'USD',
-      serviceCode: '02',
-      description: 'UPS 2nd Day Air - Estimated Rate',
-      delivery_days: 2
-    },
-    {
-      id: 'ups-nextday-estimated',
-      service: 'UPS Next Day Air (Estimated)',
-      carrier: 'UPS',
-      rate: Math.round(expressRate * 100) / 100,
-      currency: 'USD',
-      serviceCode: '01',
-      description: 'UPS Next Day Air - Estimated Rate',
-      delivery_days: 1
-    }
-  ];
-
-  estimatedRates.forEach(rate => {
-    console.log(`  ${rate.service}: $${rate.rate}`);
-  });
-
-  return estimatedRates;
-}
 
 
 
