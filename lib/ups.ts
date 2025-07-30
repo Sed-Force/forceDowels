@@ -187,10 +187,20 @@ export async function getUPSShippingRates(
     const requestBody = {
       RateRequest: {
         Request: {
+          RequestOption: "Shop",
           TransactionReference: {
             CustomerContext: "Force Dowels Shipping Rate Request"
           }
         },
+        PickupType: {
+          Code: "03",
+          Description: "Customer Counter"
+        },
+        CustomerClassification: {
+          Code: "04",
+          Description: "Retail Rates"
+        },
+
         Shipment: {
           Shipper: {
             Name: FROM_ADDRESS.name,
@@ -211,6 +221,7 @@ export async function getUPSShippingRates(
               StateProvinceCode: toAddress.state,
               PostalCode: toAddress.zip,
               CountryCode: toAddress.country
+              // No ResidentialAddressIndicator = Commercial/Business address
             }
           },
           ShipFrom: {
@@ -226,7 +237,7 @@ export async function getUPSShippingRates(
           Package: [{
             PackagingType: {
               Code: "02", // Customer Supplied Package
-              Description: "Package"
+              Description: "Customer Supplied Package"
             },
             Dimensions: {
               UnitOfMeasurement: {
@@ -251,7 +262,9 @@ export async function getUPSShippingRates(
 
 
 
-    // Use Shop option to get multiple service rates
+    console.log('UPS API Request:', JSON.stringify(requestBody, null, 2));
+
+    // Use Shop endpoint to get multiple service rates
     const response = await fetch(`${UPS_BASE_URL}/api/rating/v1/Shop`, {
       method: 'POST',
       headers: {
@@ -263,6 +276,12 @@ export async function getUPSShippingRates(
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('UPS Rating API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText,
+        url: `${UPS_BASE_URL}/api/rating/v1/Rate`
+      });
       throw new Error(`UPS Rating API failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
@@ -281,12 +300,16 @@ export async function getUPSShippingRates(
         const totalCharges = shipment.TotalCharges;
         const timeInTransit = shipment.TimeInTransit;
 
+        // Use the exact rate structure that matches UPS website
+        const rateValue = parseFloat(totalCharges.MonetaryValue) || 0;
+        const currency = totalCharges.CurrencyCode || 'USD';
+
         rates.push({
-          id: `ups-${service.Code}-${totalCharges.MonetaryValue}`,
+          id: `ups-${service.Code}-${rateValue}`,
           service: service.Description || getUPSServiceName(service.Code),
           carrier: 'UPS',
-          rate: parseFloat(totalCharges.MonetaryValue) || 0,
-          currency: totalCharges.CurrencyCode || 'USD',
+          rate: rateValue,
+          currency: currency,
           serviceCode: service.Code,
           description: service.Description || getUPSServiceName(service.Code),
           delivery_days: timeInTransit?.ServiceSummary?.EstimatedArrival?.BusinessDaysInTransit
@@ -300,7 +323,8 @@ export async function getUPSShippingRates(
     return rates.sort((a, b) => a.rate - b.rate);
 
   } catch (error) {
-    throw new Error('UPS shipping service is currently unavailable. Please try again later.');
+    console.error('UPS shipping calculation error:', error);
+    throw new Error(`UPS shipping service error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
