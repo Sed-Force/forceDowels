@@ -34,13 +34,13 @@ export interface UPSPackageDimensions {
 // Updated with corrected weight calculations based on consistent scaling
 export const TIER_DATA = [
   { tierName: "Small Box",             maxQty: 5_000,     pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  18.6, dimsIn: [15, 15, 10] },   // 1 small box (baseline)
+    pkgType: "BOX",    weightLbs:  20, dimsIn: [15, 15, 10] },   // 1 small box (baseline)
   { tierName: "Medium Box",            maxQty: 10_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  38,   dimsIn: [18, 18, 11] },   // 1 medium box (baseline)
+    pkgType: "BOX",    weightLbs:  40,   dimsIn: [18, 18, 11] },   // 1 medium box (baseline)
   { tierName: "Large Box",             maxQty: 15_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  57,   dimsIn: [19, 19, 12] },   // 1 large box (15K dowels + packaging)
+    pkgType: "BOX",    weightLbs:  60,   dimsIn: [19, 19, 12] },   // 1 large box (15K dowels + packaging)
   { tierName: "Box",                   maxQty: 20_000,    pkgCount: 1,
-    pkgType: "BOX",    weightLbs:  76,   dimsIn: [20, 20, 12] },   // 1 box (20K dowels + packaging)
+    pkgType: "BOX",    weightLbs:  80,   dimsIn: [20, 20, 12] },   // 1 box (20K dowels + packaging)
   { tierName: "Pallet-4-box",          maxQty: 80_000,    pkgCount: 1,
     pkgType: "PALLET", weightLbs: 458,   dimsIn: [40, 48,  6] },   // 1 pallet / 4 boxes
   { tierName: "Pallet-8-box",          maxQty:160_000,    pkgCount: 1,
