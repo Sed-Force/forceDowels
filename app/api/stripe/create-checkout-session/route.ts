@@ -4,29 +4,41 @@ import { stripe, formatAmountForStripe } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔐 Stripe API: Checking authentication...')
-
-    // Get user first since currentUser() is working reliably
-    const user = await currentUser()
-    console.log('🔐 Stripe API: currentUser():', user ? 'found' : 'not found')
-
-    if (!user) {
-      console.error('❌ Stripe API: currentUser() returned null')
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
-
-    // Use user.id as the userId since auth() is not working as expected
-    const userId = user.id
-    console.log('🔐 Stripe API: Using userId from user object:', userId)
+    console.log('🔐 Stripe API: Processing checkout session...')
 
     const body = await request.json()
-    const { items, shippingInfo, billingInfo, shippingOption, orderTotal } = body
+    const { items, shippingInfo, billingInfo, shippingOption, orderTotal, guestInfo } = body
+
+    // Check if this is a guest checkout or authenticated user
+    const user = await currentUser()
+    const isGuestCheckout = !user && guestInfo
+
+    let userId: string
+    let userEmail: string
+    let userName: string
+
+    if (isGuestCheckout) {
+      // Guest checkout - use provided guest information
+      userId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      userEmail = guestInfo.email
+      userName = guestInfo.name
+      console.log('🔐 Stripe API: Guest checkout detected:', { userId, userEmail, userName })
+    } else if (user) {
+      // Authenticated user
+      userId = user.id
+      userEmail = user.emailAddresses?.[0]?.emailAddress || ''
+      userName = user.firstName || user.username || userEmail.split('@')[0]
+      console.log('🔐 Stripe API: Authenticated user:', { userId, userEmail, userName })
+    } else {
+      console.error('❌ Stripe API: No user or guest info provided')
+      return NextResponse.json({ error: 'User authentication or guest information required' }, { status: 401 })
+    }
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items provided' }, { status: 400 })
     }
 
-    console.log('✅ Stripe API: User authenticated successfully with userId:', userId)
+    console.log('✅ Stripe API: Processing checkout session for:', isGuestCheckout ? 'guest user' : 'authenticated user')
     console.log('📦 Creating checkout session for order:', {
       itemCount: items.length,
       subtotal: orderTotal?.subtotal,
@@ -34,7 +46,8 @@ export async function POST(request: NextRequest) {
       tax: orderTotal?.tax?.amount,
       total: orderTotal?.total,
       shippingOption,
-      userEmail: user.emailAddresses?.[0]?.emailAddress
+      userEmail,
+      isGuest: isGuestCheckout
     })
 
     // Create line items for Stripe
@@ -67,9 +80,6 @@ export async function POST(request: NextRequest) {
 
     // Note: Tax is now handled automatically by Stripe, so we don't add it as a line item
 
-    // Get user email
-    const userEmail = user.emailAddresses?.[0]?.emailAddress || ''
-
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'us_bank_account'], // Add us_bank_account for ACH
@@ -91,8 +101,9 @@ export async function POST(request: NextRequest) {
       },
       metadata: {
         userId: userId,
-        userName: user.firstName || user.username || userEmail.split('@')[0],
+        userName: userName,
         userEmail: userEmail,
+        isGuest: isGuestCheckout.toString(),
         shippingInfo: JSON.stringify(shippingInfo),
         billingInfo: JSON.stringify(billingInfo),
         cartItems: JSON.stringify(items),

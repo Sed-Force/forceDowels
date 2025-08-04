@@ -11,12 +11,14 @@ export interface OrderData {
   billingInfo: any
   paymentStatus: string
   stripeSessionId: string
+  isGuest?: boolean
 }
 
 export interface Order extends OrderData {
   id: string
   createdAt: Date
   updatedAt: Date
+  isGuest?: boolean
 }
 
 // Initialize orders table
@@ -35,16 +37,22 @@ export async function initializeOrdersTable() {
         billing_info JSONB NOT NULL,
         payment_status VARCHAR(50) NOT NULL DEFAULT 'pending',
         stripe_session_id VARCHAR(255),
+        is_guest BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `)
     
+    // Add is_guest column if it doesn't exist (migration for existing tables)
+    await query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_guest BOOLEAN DEFAULT FALSE
+    `)
+
     // Create index on user_id for faster queries
     await query(`
       CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)
     `)
-    
+
     // Create index on stripe_session_id for webhook lookups
     await query(`
       CREATE INDEX IF NOT EXISTS idx_orders_stripe_session_id ON orders(stripe_session_id)
@@ -63,8 +71,8 @@ export async function createOrder(orderData: OrderData): Promise<Order> {
     const result = await query(`
       INSERT INTO orders (
         user_id, user_email, user_name, quantity, tier, total_price,
-        shipping_info, billing_info, payment_status, stripe_session_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        shipping_info, billing_info, payment_status, stripe_session_id, is_guest
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `, [
       orderData.userId,
@@ -76,7 +84,8 @@ export async function createOrder(orderData: OrderData): Promise<Order> {
       JSON.stringify(orderData.shippingInfo),
       JSON.stringify(orderData.billingInfo),
       orderData.paymentStatus,
-      orderData.stripeSessionId
+      orderData.stripeSessionId,
+      orderData.isGuest || false
     ])
 
     const row = result.rows[0]
@@ -92,6 +101,7 @@ export async function createOrder(orderData: OrderData): Promise<Order> {
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
+      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }
@@ -123,6 +133,7 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
+      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }
@@ -248,6 +259,7 @@ export async function updateOrderPaymentStatus(
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
+      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }
@@ -290,6 +302,7 @@ export async function updateOrdersPaymentStatusBySession(
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
+      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }))
