@@ -139,6 +139,7 @@ async function handleSuccessfulPayment(session: any) {
   const userId = metadata.userId
   const userName = metadata.userName
   const userEmail = metadata.userEmail
+  const isGuest = metadata.isGuest === 'true'
   const shippingInfo = JSON.parse(metadata.shippingInfo || '{}')
   const billingInfo = JSON.parse(metadata.billingInfo || '{}')
   const cartItems = JSON.parse(metadata.cartItems || '[]')
@@ -167,7 +168,9 @@ async function handleSuccessfulPayment(session: any) {
     shippingCost,
     taxAmount,
     orderTotal,
-    shippingOption
+    shippingOption,
+    isGuest,
+    userType: isGuest ? 'guest' : 'authenticated'
   })
 
   // Create one comprehensive order record with all details
@@ -197,6 +200,7 @@ async function handleSuccessfulPayment(session: any) {
     },
     paymentStatus: 'pending',
     stripeSessionId: session.id,
+    isGuest: isGuest
   })
 
   console.log('Created comprehensive order:', order.id, 'with', order.quantity, 'total dowels')

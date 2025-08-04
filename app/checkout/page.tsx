@@ -20,7 +20,6 @@ import { ShippingOption } from "@/lib/shipping"
 
 export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
   const [paymentCanceled, setPaymentCanceled] = useState(false)
   const [userFormPrefilled, setUserFormPrefilled] = useState(false)
   const [shippingRates, setShippingRates] = useState<ShippingOption[]>([])
@@ -64,7 +63,14 @@ export default function CheckoutPage() {
   const { isSignedIn, userId } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const { items, clearCart, totalPrice } = useCart()
+  const { items, totalPrice } = useCart()
+
+  // Guest checkout state
+  const [guestInfo, setGuestInfo] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  })
 
   // Form state
   const [formState, setFormState] = useState({
@@ -448,37 +454,39 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Debug authentication state
-    console.log('Authentication state:', {
+    // Determine if this is guest checkout or authenticated user
+    const isGuest = !user || !isSignedIn
+
+    console.log('Checkout submission:', {
       isLoaded,
       isSignedIn,
       userId,
       user: !!user,
-      userFullName: user?.fullName,
-      userFirstName: user?.firstName
+      isGuest,
+      guestInfo: isGuest ? guestInfo : null
     })
 
-    // Since middleware protects this route, we should have a user
-    // But let's add a safety check for the form submission
-    if (!isLoaded) {
-      toast({
-        title: "Loading...",
-        description: "Please wait while we verify your authentication.",
-        variant: "default",
-      })
-      return
-    }
+    // For guest checkout, validate guest information
+    if (isGuest) {
+      if (!guestInfo.name || !guestInfo.email) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in your name and email address.",
+          variant: "destructive",
+        })
+        return
+      }
 
-    // This should not happen due to middleware protection, but safety check
-    if (!user || !userId) {
-      console.error('Unexpected: User not found despite middleware protection:', { isLoaded, isSignedIn, userId, user: !!user })
-      toast({
-        title: "Authentication error",
-        description: "There was an issue with your authentication. Please try signing in again.",
-        variant: "destructive",
-      })
-      router.push('/sign-in?redirect=/checkout')
-      return
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(guestInfo.email)) {
+        toast({
+          title: "Invalid email",
+          description: "Please enter a valid email address.",
+          variant: "destructive",
+        })
+        return
+      }
     }
 
     // Validate required fields
@@ -506,33 +514,40 @@ export default function CheckoutPage() {
 
       console.log('Creating real order with total:', finalOrderTotal.total)
 
-      // Create Stripe checkout session with real user data
+      // Create Stripe checkout session with user or guest data
+      const checkoutData: any = {
+        items: items,
+        shippingInfo: {
+          name: formState.shippingName,
+          address: formState.shippingAddress,
+          city: formState.shippingCity,
+          state: formState.shippingState,
+          zip: formState.shippingZip,
+          country: formState.shippingCountry,
+        },
+        billingInfo: {
+          name: formState.billingName,
+          address: formState.billingAddress,
+          city: formState.billingCity,
+          state: formState.billingState,
+          zip: formState.billingZip,
+          country: formState.billingCountry,
+        },
+        shippingOption: formState.shippingOption,
+        orderTotal: finalOrderTotal
+      }
+
+      // Add guest info if this is a guest checkout
+      if (isGuest) {
+        checkoutData.guestInfo = guestInfo
+      }
+
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          items: items,
-          shippingInfo: {
-            name: formState.shippingName,
-            address: formState.shippingAddress,
-            city: formState.shippingCity,
-            state: formState.shippingState,
-            zip: formState.shippingZip,
-            country: formState.shippingCountry,
-          },
-          billingInfo: {
-            name: formState.billingName,
-            address: formState.billingAddress,
-            city: formState.billingCity,
-            state: formState.billingState,
-            zip: formState.billingZip,
-            country: formState.billingCountry,
-          },
-          shippingOption: formState.shippingOption,
-          orderTotal: finalOrderTotal
-        }),
+        body: JSON.stringify(checkoutData),
       })
 
       if (!response.ok) {
@@ -570,16 +585,15 @@ export default function CheckoutPage() {
     )
   }
 
-  // Since middleware protects this route, user should be authenticated
-  // This is a safety check that should rarely trigger
-  if (!user || !userId) {
+  // Check if cart is empty
+  if (items.length === 0) {
     return (
       <div className="container py-8">
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-red-600 mb-4">Authentication error occurred.</p>
-            <Button onClick={() => router.push('/sign-in?redirect=/checkout')}>
-              Sign In Again
+            <p className="text-gray-600 mb-4">Your cart is empty.</p>
+            <Button onClick={() => router.push('/order')}>
+              Continue Shopping
             </Button>
           </div>
         </div>
@@ -602,6 +616,61 @@ export default function CheckoutPage() {
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-2">
           <form onSubmit={handleSubmitOrder}>
+            {/* Guest Information Section - only show if not authenticated */}
+            {(!user || !isSignedIn) && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Enter your contact details to complete your order as a guest.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4">
+                    <div>
+                      <Label htmlFor="guestName">Full Name *</Label>
+                      <Input
+                        id="guestName"
+                        name="guestName"
+                        value={guestInfo.name}
+                        onChange={(e) => setGuestInfo(prev => ({ ...prev, name: e.target.value }))}
+                        required
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="guestEmail">Email Address *</Label>
+                      <Input
+                        id="guestEmail"
+                        name="guestEmail"
+                        type="email"
+                        value={guestInfo.email}
+                        onChange={(e) => setGuestInfo(prev => ({ ...prev, email: e.target.value }))}
+                        required
+                        placeholder="Enter your email address"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        We'll send your order confirmation to this email address.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="guestPhone">Phone Number (Optional)</Label>
+                      <Input
+                        id="guestPhone"
+                        name="guestPhone"
+                        type="tel"
+                        value={guestInfo.phone}
+                        onChange={(e) => setGuestInfo(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Shipping Information</CardTitle>
