@@ -133,7 +133,6 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
-      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }
@@ -259,7 +258,6 @@ export async function updateOrderPaymentStatus(
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
-      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }
@@ -302,7 +300,6 @@ export async function updateOrdersPaymentStatusBySession(
       billingInfo: row.billing_info,
       paymentStatus: row.payment_status,
       stripeSessionId: row.stripe_session_id,
-      isGuest: row.is_guest,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }))

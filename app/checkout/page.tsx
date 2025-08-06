@@ -17,6 +17,8 @@ import { usStates } from "@/lib/distributor-validation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ShippingOption } from "@/lib/shipping"
+import { validateGuestCheckout } from "@/lib/guest-checkout-validation"
+import { AuthRequiredNotice } from "@/components/auth-required-notice"
 
 export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -65,7 +67,8 @@ export default function CheckoutPage() {
   const { toast } = useToast()
   const { items, totalPrice } = useCart()
 
-  // Guest checkout state
+  // Guest checkout validation
+  const guestCheckoutValidation = useMemo(() => validateGuestCheckout(items), [items])
   const [guestInfo, setGuestInfo] = useState({
     name: '',
     email: '',
@@ -131,6 +134,8 @@ export default function CheckoutPage() {
       router.push('/cart')
     }
   }, []) // Remove dependencies to prevent loops - only check on mount
+
+
 
   // Clear shipping rates when address changes
   useEffect(() => {
@@ -454,7 +459,7 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Determine if this is guest checkout or authenticated user
+    // Check if this is a guest checkout or authenticated user
     const isGuest = !user || !isSignedIn
 
     console.log('Checkout submission:', {
@@ -463,11 +468,21 @@ export default function CheckoutPage() {
       userId,
       user: !!user,
       isGuest,
-      guestInfo: isGuest ? guestInfo : null
+      guestCheckoutAllowed: guestCheckoutValidation.isAllowed
     })
 
+    // If user is not authenticated, check if guest checkout is allowed
+    if (isGuest && guestCheckoutValidation.requiresAuth) {
+      toast({
+        title: "Account Required",
+        description: guestCheckoutValidation.reason || "This order requires an account to proceed.",
+        variant: "destructive",
+      })
+      return
+    }
+
     // For guest checkout, validate guest information
-    if (isGuest) {
+    if (isGuest && guestCheckoutValidation.isAllowed) {
       if (!guestInfo.name || !guestInfo.email) {
         toast({
           title: "Missing information",
@@ -487,6 +502,16 @@ export default function CheckoutPage() {
         })
         return
       }
+    }
+
+    // For authenticated users, check if loaded
+    if (!isGuest && !isLoaded) {
+      toast({
+        title: "Loading...",
+        description: "Please wait while we verify your authentication.",
+        variant: "default",
+      })
+      return
     }
 
     // Validate required fields
@@ -538,7 +563,7 @@ export default function CheckoutPage() {
       }
 
       // Add guest info if this is a guest checkout
-      if (isGuest) {
+      if (isGuest && guestCheckoutValidation.isAllowed) {
         checkoutData.guestInfo = guestInfo
       }
 
@@ -601,6 +626,23 @@ export default function CheckoutPage() {
     )
   }
 
+  // Show authentication required notice for guest users with restricted items
+  if (!user && guestCheckoutValidation.requiresAuth) {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center mb-6">
+          <Link href="/cart" className="flex items-center text-gray-600 hover:text-amber-600 mr-4">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Cart
+          </Link>
+          <h1 className="text-3xl font-bold">Checkout</h1>
+        </div>
+
+        <AuthRequiredNotice validation={guestCheckoutValidation} />
+      </div>
+    )
+  }
+
   return (
     <div className="container py-8">
 
@@ -616,8 +658,8 @@ export default function CheckoutPage() {
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-2">
           <form onSubmit={handleSubmitOrder}>
-            {/* Guest Information Section - only show if not authenticated */}
-            {(!user || !isSignedIn) && (
+            {/* Guest Information Section - only show if not authenticated and guest checkout is allowed */}
+            {(!user || !isSignedIn) && guestCheckoutValidation.isAllowed && (
               <Card className="mb-6">
                 <CardHeader>
                   <CardTitle>Contact Information</CardTitle>
