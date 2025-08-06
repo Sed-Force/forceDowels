@@ -3,12 +3,13 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
-import { HelpCircle, ArrowRight, Lock } from "lucide-react"
+import { HelpCircle, ArrowRight, Lock, Info } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
 import gsap from "gsap"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -22,10 +23,15 @@ export function PricingComponent() {
   const [quantity, setQuantity] = useState<number>(5000)
   const [selectedTier, setSelectedTier] = useState<string>("tier1")
   const [isClient, setIsClient] = useState(false)
-  const user = useUser()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
   const { toast } = useToast()
   const { addItem, items } = useCart()
+
+  // Helper function to check if a tier requires authentication (defensive check for SSR)
+  const tierRequiresAuth = (tierMin: number) => {
+    return isLoaded && !user && tierMin > 5000
+  }
 
   // Refs for GSAP animations
   const headerRef = useRef(null)
@@ -165,16 +171,6 @@ export function PricingComponent() {
 
   // Handle add to cart
   const handleAddToCart = () => {
-    if (!user) {
-      toast({
-        title: "Login required",
-        description: "Please login or create an account to make a purchase.",
-        variant: "destructive",
-      })
-      router.push("/handler/sign-in?redirect=/pricing")
-      return
-    }
-
     const tier = tiers.find((t) => t.id === selectedTier) || tiers[0]
     const pricePerUnit = Number.parseFloat(tier.pricePerUnit.replace("$", ""))
     
@@ -194,16 +190,6 @@ export function PricingComponent() {
 
   // Handle add Force Dowels Kit to cart
   const handleAddKitToCart = () => {
-    if (!user) {
-      toast({
-        title: "Login required",
-        description: "Please login or create an account to make a purchase.",
-        variant: "destructive",
-      })
-      router.push("/handler/sign-in?redirect=/pricing")
-      return
-    }
-
     // Check if kit already exists in cart
     const existingKit = items.find((i) => i.name === "Force Dowels Kit")
     
@@ -253,6 +239,17 @@ export function PricingComponent() {
     return null // Prevent hydration errors
   }
 
+  // Show loading state while authentication is loading
+  if (!isLoaded) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="text-center mb-10" ref={headerRef}>
@@ -276,24 +273,6 @@ export function PricingComponent() {
         </motion.p>
       </div>
 
-      {!user ? (
-        <Card className="w-full max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle>Authentication Required</CardTitle>
-            <CardDescription>Please sign in to view pricing information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4">Our pricing tiers and detailed pricing information are available to registered users only.</p>
-            <Button
-              className="w-full bg-amber-600 hover:bg-amber-700"
-              onClick={() => router.push('/handler/sign-in?redirect=/pricing')}
-            >
-              <Lock className="h-4 w-4 mr-2" />
-              Sign In to View Pricing
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
         <div className="grid gap-8 md:grid-cols-2">
         <div ref={calculatorRef}>
           <motion.div variants={cardVariants} initial="hidden" animate="visible" layout transition={{ duration: 0.3 }}>
@@ -367,20 +346,31 @@ export function PricingComponent() {
               </CardContent>
               <CardFooter>
                 <motion.div className="w-full" variants={buttonVariants} whileHover="hover" whileTap="tap">
-                  {user ? (
-                    <Button className="w-full bg-amber-600 hover:bg-amber-700" size="lg" onClick={handleAddToCart}>
-                      Add to Cart
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full bg-amber-600 hover:bg-amber-700"
-                      size="lg"
-                      onClick={() => router.push("/handler/sign-in?redirect=/pricing")}
-                    >
-                      <Lock className="h-4 w-4 mr-2" />
-                      Login to Purchase
-                    </Button>
-                  )}
+                  {(() => {
+                    const currentTier = tiers.find((t) => t.id === selectedTier) || tiers[0]
+                    const isRestricted = tierRequiresAuth(currentTier.minUnits)
+
+                    return (
+                      <Button
+                        className={`w-full ${
+                          isRestricted
+                            ? "bg-gray-400 hover:bg-gray-500"
+                            : "bg-amber-600 hover:bg-amber-700"
+                        }`}
+                        size="lg"
+                        onClick={isRestricted ? () => router.push('/sign-in?redirect=/pricing') : handleAddToCart}
+                      >
+                        {isRestricted ? (
+                          <>
+                            <Lock className="h-4 w-4 mr-2" />
+                            Sign In to Add to Cart
+                          </>
+                        ) : (
+                          "Add to Cart"
+                        )}
+                      </Button>
+                    )
+                  })()}
                 </motion.div>
               </CardFooter>
             </Card>
@@ -388,13 +378,34 @@ export function PricingComponent() {
         </div>
 
         <div ref={tiersRef}>
+          {isLoaded && !user && (
+            <Alert className="mb-6 border-amber-200 bg-amber-50">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-amber-800">
+                <strong>Guest Checkout Available:</strong> Orders of 5,000 dowels or less, and all kit purchases,
+                can be completed without an account. Larger orders require sign-in for business verification.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Tabs value={selectedTier} onValueChange={handleTierSelect} className="w-full">
             <TabsList className="grid grid-cols-3 mb-6">
-              {tiers.map((tier) => (
-                <TabsTrigger key={tier.id} value={tier.id}>
-                  {tier.name}
-                </TabsTrigger>
-              ))}
+              {tiers.map((tier) => {
+                const isRestricted = tierRequiresAuth(tier.minUnits)
+                return (
+                  <TabsTrigger
+                    key={tier.id}
+                    value={tier.id}
+                    disabled={isRestricted}
+                    className={isRestricted ? "opacity-50 cursor-not-allowed" : ""}
+                  >
+                    <div className="flex items-center">
+                      {tier.name}
+                      {isRestricted && <Lock className="h-3 w-3 ml-1" />}
+                    </div>
+                  </TabsTrigger>
+                )
+              })}
             </TabsList>
 
             <div className="relative">
@@ -519,7 +530,6 @@ export function PricingComponent() {
             </Card>
           </motion.div>
         </div>
-      )}
 
       <div className="mt-12 text-center" ref={customQuoteRef}>
         <motion.h2

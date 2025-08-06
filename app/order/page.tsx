@@ -10,12 +10,11 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { Lock, Loader2, ShoppingCart, Plus, Minus, Info } from "lucide-react"
+import { Loader2, ShoppingCart, Plus, Minus, Info, Lock } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { PRICING_TIERS, getTierInfo, formatNumber as formatNum, formatCurrency, formatExactPrice, isValidQuantityIncrement, roundToValidQuantity } from "@/lib/pricing"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CardDescription, CardFooter } from "@/components/ui/card"
 
 export default function OrderPage() {
   const [quantity, setQuantity] = useState<number>(5000)
@@ -23,12 +22,22 @@ export default function OrderPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isKit, setIsKit] = useState(false)
   const { toast } = useToast()
-  const user = useUser()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
   const { addItem, items } = useCart()
 
   // Use the pricing tiers from the pricing utility
   const tiers = PRICING_TIERS
+
+  // Helper function to check if a quantity requires authentication
+  const requiresAuth = (qty: number) => {
+    if (qty === 300) return false // Kit is always allowed
+    if (qty === 5000) return false // 5K dowels allowed for guest
+    return qty > 5000 // Anything above 5K requires auth
+  }
+
+  // Check if current selection requires auth (defensive check for SSR)
+  const currentRequiresAuth = isLoaded && !user && requiresAuth(quantity)
 
   // Handle quantity change
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,17 +94,6 @@ export default function OrderPage() {
   // Handle add to cart
   const handleAddToCart = () => {
     try {
-      // Check if user is authenticated
-      if (!user) {
-        toast({
-          title: "Login required",
-          description: "Please login or create an account to add items to your cart.",
-          variant: "destructive",
-        })
-        router.push("/handler/sign-in?redirect=/order")
-        return
-      }
-
       setIsSubmitting(true)
 
       // Validate quantity increment (skip for kit)
@@ -216,6 +214,17 @@ export default function OrderPage() {
 
 
 
+  // Show loading state while authentication is loading
+  if (!isLoaded) {
+    return (
+      <div className="container flex flex-1 px-4 py-8 md:px-6">
+        <div className="flex justify-center items-center min-h-[400px] w-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <motion.main
       className="flex min-h-[calc(100vh-4rem)] flex-col"
@@ -224,24 +233,6 @@ export default function OrderPage() {
       transition={{ duration: 0.5 }}
     >
       <div className="container flex flex-1 px-4 py-8 md:px-6">
-        {!user ? (
-          <Card className="w-full max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle>Authentication Required</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4">Please sign in to view pricing tiers and place orders.</p>
-              <Button
-                className="w-full bg-amber-600 hover:bg-amber-700"
-                onClick={() => router.push('/handler/sign-in?redirect=/order')}
-              >
-                <Lock className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
         
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -250,22 +241,55 @@ export default function OrderPage() {
                 Pricing Tiers
               </motion.h2>
 
+              {isLoaded && !user && (
+                <Alert className="mb-4 border-amber-200 bg-amber-50">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-amber-800">
+                    <strong>Guest Checkout Available:</strong> Orders of 5,000 dowels or less, and all kit purchases,
+                    can be completed without an account. Larger orders require sign-in for business verification.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-4">
-                {tiers.map((tier) => (
-                  <motion.div
-                    key={tier.range}
-                    variants={itemVariants}
-                    className={`flex justify-between items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer transition-colors duration-200 ${
-                      selectedTier === tier.range ? "border-amber-600 bg-amber-50" : ""
-                    }`}
-                    onClick={() => handleTierSelect(tier)}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                  >
-                    <span className="font-medium">{tier.range}</span>
-                    <span className="text-amber-600 font-bold">${formatExactPrice(tier.pricePerUnit)}/Unit</span>
-                  </motion.div>
-                ))}
+                {tiers.map((tier) => {
+                  const tierRequiresAuth = isLoaded && !user && requiresAuth(tier.min)
+                  const isDisabled = tierRequiresAuth
+
+                  return (
+                    <motion.div
+                      key={tier.range}
+                      variants={itemVariants}
+                      className={`flex justify-between items-center p-3 border rounded-md transition-colors duration-200 relative ${
+                        selectedTier === tier.range
+                          ? "border-amber-600 bg-amber-50"
+                          : isDisabled
+                            ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                            : "hover:bg-gray-50 cursor-pointer"
+                      }`}
+                      onClick={() => !isDisabled && handleTierSelect(tier)}
+                      whileHover={!isDisabled ? { scale: 1.01 } : {}}
+                      whileTap={!isDisabled ? { scale: 0.99 } : {}}
+                    >
+                      <div className="flex items-center">
+                        <span className={`font-medium ${isDisabled ? 'text-gray-400' : ''}`}>
+                          {tier.range}
+                        </span>
+                        {isDisabled && (
+                          <Lock className="h-4 w-4 ml-2 text-gray-400" />
+                        )}
+                      </div>
+                      <span className={`font-bold ${isDisabled ? 'text-gray-400' : 'text-amber-600'}`}>
+                        ${formatExactPrice(tier.pricePerUnit)}/Unit
+                      </span>
+                      {isDisabled && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-md">
+                          <span className="text-xs text-gray-500 font-medium">Sign in required</span>
+                        </div>
+                      )}
+                    </motion.div>
+                  )
+                })}
               </div>
 
             {/* Force Dowels Kit Option */}
@@ -413,9 +437,13 @@ export default function OrderPage() {
 
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                     <Button
-                      className="w-full bg-amber-600 hover:bg-amber-700 mt-4"
+                      className={`w-full mt-4 ${
+                        currentRequiresAuth
+                          ? "bg-gray-400 hover:bg-gray-500"
+                          : "bg-amber-600 hover:bg-amber-700"
+                      }`}
                       size="lg"
-                      onClick={handleAddToCart}
+                      onClick={currentRequiresAuth ? () => router.push('/sign-in?redirect=/order') : handleAddToCart}
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
@@ -423,15 +451,15 @@ export default function OrderPage() {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Processing...
                         </>
-                      ) : user ? (
+                      ) : currentRequiresAuth ? (
                         <>
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart
+                          <Lock className="h-4 w-4 mr-2" />
+                          Sign In to Add to Cart
                         </>
                       ) : (
                         <>
-                          <Lock className="h-4 w-4 mr-2" />
-                          Login to Add to Cart
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Add to Cart
                         </>
                       )}
                     </Button>
@@ -450,8 +478,6 @@ export default function OrderPage() {
             </Card>
           </motion.div>
           </div>
-          </>
-        )}
       </div>
     </motion.main>
   )
