@@ -262,8 +262,6 @@ export async function getUPSShippingRates(
 
 
 
-    console.log('UPS API Request:', JSON.stringify(requestBody, null, 2));
-
     // Use Shop endpoint to get multiple service rates
     const response = await fetch(`${UPS_BASE_URL}/api/rating/v1/Shop`, {
       method: 'POST',
@@ -276,12 +274,6 @@ export async function getUPSShippingRates(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('UPS Rating API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorText: errorText,
-        url: `${UPS_BASE_URL}/api/rating/v1/Rate`
-      });
       throw new Error(`UPS Rating API failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
@@ -323,7 +315,6 @@ export async function getUPSShippingRates(
     return rates.sort((a, b) => a.rate - b.rate);
 
   } catch (error) {
-    console.error('UPS shipping calculation error:', error);
     throw new Error(`UPS shipping service error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
