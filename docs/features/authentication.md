@@ -50,6 +50,7 @@ The authentication system provides:
   - `/distributor-application` (distributor applications)
   - `/privacy-policy` and `/terms-of-service` (legal pages)
   - `/videos` (product videos)
+  - `/faq` (frequently asked questions)
   - API routes for public functionality
 
 #### Protected Routes
