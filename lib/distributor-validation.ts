@@ -29,12 +29,12 @@ export const distributorApplicationSchema = z.object({
   yearsInBusiness: z.coerce.number().min(0, "Years in business must be 0 or greater"),
   territory: z.string().min(10, "Please describe your territory/coverage area"),
   purchaseVolume: z.enum([
-    "less-than-500",
-    "500-1000", 
-    "1000-5000",
-    "5000-plus"
+    "50000-100000",
+    "100000-250000",
+    "250000-500000",
+    "500000-plus"
   ], {
-    required_error: "Please select estimated monthly purchase volume",
+    required_error: "Please select estimated annual purchase volume",
   }),
   
   // Additional Information
@@ -94,10 +94,10 @@ export const businessTypeOptions = [
 ];
 
 export const purchaseVolumeOptions = [
-  { value: "less-than-500", label: "Less than 500 units" },
-  { value: "500-1000", label: "500–1,000 units" },
-  { value: "1000-5000", label: "1,000–5,000 units" },
-  { value: "5000-plus", label: "5,000+ units" },
+  { value: "50000-100000", label: "50,000–100,000 units" },
+  { value: "100000-250000", label: "100,000–250,000 units" },
+  { value: "250000-500000", label: "250,000–500,000 units" },
+  { value: "500000-plus", label: "500,000+ units" },
 ];
 
 export const hearAboutUsOptions = [

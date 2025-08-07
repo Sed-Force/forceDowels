@@ -428,7 +428,7 @@ export default function DistributorApplicationPage() {
                       name="purchaseVolume"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Estimated Monthly Purchase Volume *</FormLabel>
+                          <FormLabel>Estimated Annual Purchase Volume *</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
