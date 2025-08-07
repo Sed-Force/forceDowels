@@ -184,6 +184,7 @@ function HeaderContent() {
               { href: "/", label: "Home", section: "home" },
               { href: "/order", label: "Order", section: "order" },
               { href: "/videos", label: "Videos", section: "videos" },
+              { href: "/faq", label: "FAQ", section: "faq" },
               { href: "/contact", label: "Contact", section: "contact" },
             ] as NavLink[])
           ].map((link, i) => (
@@ -356,6 +357,7 @@ function HeaderContent() {
                     { href: "/", label: "Home", section: "home" },
                     { href: "/order", label: "Order", section: "order" },
                     { href: "/videos", label: "Videos", section: "videos" },
+                    { href: "/faq", label: "FAQ", section: "faq" },
                     { href: "/contact", label: "Contact", section: "contact" },
                     {
                       href: "/cart",
